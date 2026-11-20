@@ -45,7 +45,14 @@
   "options": {
     "step": {
       "init": {
-        "title": "Opties SolarEdge Monitoring",
+        "title": "SolarEdge Monitoring",
+        "menu_options": {
+          "settings": "Instellingen",
+          "import_device": "Statistieken importeren"
+        }
+      },
+      "settings": {
+        "title": "Instellingen SolarEdge Monitoring",
         "data": {
           "live_interval": "Interval live energiestroom",
           "energy_interval": "Interval energie",
@@ -62,7 +69,39 @@
           "history_days": "De knop importeert zoveel dagen tot en met vandaag.",
           "history_interval": "5 minuten schrijft ook kortetermijnstatistieken; Home Assistant bewaart die zo lang als keep_days van de recorder (standaard 10 dagen)."
         }
+      },
+      "import_device": {
+        "title": "Statistieken importeren",
+        "description": "Kies het device. Alleen devices met sensoren waarvan SolarEdge historie heeft staan in de lijst.",
+        "data": {
+          "device": "Device"
+        }
+      },
+      "import_metrics": {
+        "title": "Statistieken importeren voor {device}",
+        "description": "Kies de sensoren, het interval en de periode. De historie wordt per 5 minuten bij SolarEdge opgehaald.",
+        "data": {
+          "metrics": "Sensoren",
+          "interval": "Interval",
+          "start": "Van",
+          "end": "Tot en met (leeg = vandaag)"
+        },
+        "data_description": {
+          "interval": "5 minuten schrijft ook kortetermijnstatistieken; Home Assistant bewaart die zo lang als keep_days van de recorder (standaard 10 dagen)."
+        }
       }
+    },
+    "progress": {
+      "importing": "Historie ophalen bij SolarEdge en importeren in de statistieken…"
+    },
+    "abort": {
+      "import_finished": "Import klaar.\n\n{summary}",
+      "import_failed": "Importeren mislukt: {error}",
+      "no_importable_devices": "Geen enkel device van deze installatie heeft sensoren met historie."
+    },
+    "error": {
+      "invalid_period": "De begindatum mag niet na de einddatum liggen.",
+      "no_metrics": "Kies minstens één sensor."
     }
   },
   "entity": {
@@ -251,17 +290,8 @@
     "recorder_not_running": {
       "message": "De recorder draait niet."
     },
-    "energy_entity_not_found": {
-      "message": "De sensor Energie totaal van deze site is niet gevonden."
-    },
-    "energy_entity_disabled": {
-      "message": "{entity_id} is uitgeschakeld; schakel hem eerst in."
-    },
     "no_statistics_yet": {
-      "message": "{entity_id} heeft nog geen uurstatistieken. Probeer het opnieuw als de integratie een uur draait."
-    },
-    "no_inverters": {
-      "message": "Deze site heeft geen omvormers om historie van op te halen."
+      "message": "{entity_id} heeft nog geen uurstatistieken. Probeer het opnieuw als de recorder er één heeft geschreven (na ongeveer een uur)."
     },
     "no_history_data": {
       "message": "SolarEdge gaf geen lifetime-energie voor deze periode."
@@ -272,24 +302,40 @@
     "import_in_progress": {
       "message": "Er loopt al een import voor deze site."
     },
-    "not_a_site_device": {
-      "message": "Kies het site-device van een SolarEdge Monitoring-installatie."
-    },
     "entry_not_loaded": {
       "message": "De SolarEdge Monitoring-integratie van dit device is niet geladen."
     },
     "invalid_period": {
       "message": "De begindatum mag niet na de einddatum liggen."
+    },
+    "not_a_solaredge_device": {
+      "message": "Kies een device van SolarEdge Monitoring."
+    },
+    "no_importable_metrics": {
+      "message": "Dit device heeft geen sensoren met historie in SolarEdge."
+    },
+    "metric_not_importable": {
+      "message": "Geen historie beschikbaar voor: {entity_ids}. Kies sensoren van het gekozen device."
+    },
+    "statistics_type_mismatch": {
+      "message": "De bestaande statistieken van {entity_id} zijn van een ander type."
+    },
+    "unit_mismatch": {
+      "message": "De eenheid van {entity_id} ({unit}) kan niet worden omgerekend vanuit {api_unit}."
     }
   },
   "services": {
-    "import_energy_history": {
-      "name": "Energiehistorie importeren",
-      "description": "Haalt de lifetime-energie van de omvormers over een periode op bij SolarEdge en importeert die in de statistieken van de sensor Energie totaal van de site. Bestaande statistieken in de periode worden passend herschreven en latere sommen schuiven mee, zodat er geen sprong ontstaat.",
+    "import_statistics": {
+      "name": "Statistieken importeren",
+      "description": "Haalt de historie van sensoren van een device op bij SolarEdge en importeert die in hun statistieken. Bestaande statistieken in de periode worden passend herschreven en latere sommen schuiven mee, zodat er geen sprong ontstaat.",
       "fields": {
         "device_id": {
-          "name": "Site",
-          "description": "Het SolarEdge-site-device."
+          "name": "Device",
+          "description": "Een device van SolarEdge Monitoring (site, omvormer of optimizer)."
+        },
+        "entity_id": {
+          "name": "Sensoren",
+          "description": "Sensoren van dit device om te importeren. Leeg: alle sensoren van het device met historie."
         },
         "start": {
           "name": "Van",
@@ -297,11 +343,11 @@
         },
         "end": {
           "name": "Tot en met",
-          "description": "Laatste dag om te importeren. Standaard vandaag. Eindigt uiterlijk bij de laatste uurstatistiek van de recorder."
+          "description": "Laatste dag om te importeren. Leeg: vandaag. Sommen eindigen bij de laatste uurstatistiek van de recorder."
         },
         "interval": {
           "name": "Interval",
-          "description": "5 minuten (ook kortetermijnstatistieken), 1 uur, of 1 dag (één rij aan het eind van elke dag)."
+          "description": "5 minuten (ook kortetermijnstatistieken), 1 uur, of 1 dag (één rij per dag)."
         }
       }
     }

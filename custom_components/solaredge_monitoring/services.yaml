@@ -1,4 +1,4 @@
-import_energy_history:
+import_statistics:
   fields:
     device_id:
       required: true
@@ -6,6 +6,14 @@ import_energy_history:
         device:
           filter:
             integration: solaredge_monitoring
+    entity_id:
+      required: false
+      selector:
+        entity:
+          multiple: true
+          filter:
+            integration: solaredge_monitoring
+            domain: sensor
     start:
       required: true
       selector:

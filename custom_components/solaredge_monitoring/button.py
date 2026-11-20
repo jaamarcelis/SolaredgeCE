@@ -11,8 +11,8 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import SolarEdgeEntity, site_device
-from .history import HistoryImportError
 from .services import async_run_import, button_period, notify_result
+from .statistics_import import HistoryImportError, importable_metrics
 
 if TYPE_CHECKING:
     from . import SolarEdgeConfigEntry
@@ -51,7 +51,14 @@ class ImportHistoryButton(SolarEdgeEntity, ButtonEntity):
 
     async def _run(self) -> None:
         try:
-            result = await async_run_import(self.hass, self._entry, *button_period(self._entry))
+            metrics = [
+                m
+                for m in importable_metrics(self.hass, self._entry.runtime_data.model, self.device_entry.id)
+                if m.unique_id.endswith("_site_energy_lifetime")
+            ]
+            if not metrics:
+                raise HistoryImportError("no_importable_metrics")
+            result = await async_run_import(self.hass, self._entry, metrics, *button_period(self._entry))
         except HomeAssistantError as err:
             notify_result(self.hass, self._entry, None, str(err))
             return

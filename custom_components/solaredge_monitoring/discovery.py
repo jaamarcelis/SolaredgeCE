@@ -26,6 +26,8 @@ from .metrics import MetricSpec, describe_metric, disambiguate
 
 _LOGGER = logging.getLogger(__name__)
 
+OPTIMIZER_TYPE = "OPTIMIZER"  # analysis-apparaattype van optimizers
+
 
 @dataclass(slots=True)
 class InverterModel:
@@ -62,6 +64,11 @@ class OptimizerModel:
     model: str | None = None
     info: OptimizerBasicInformation | None = None
 
+    @property
+    def identifier(self) -> str:
+        """Korte ID voor analysis (generate-chart), bijv. 12A33800 uit 12A33800-ED."""
+        return self.serial.split("-", 1)[0]
+
 
 @dataclass(slots=True)
 class SiteModel:
@@ -78,6 +85,8 @@ class SiteModel:
     batteries: list[StorageDevice] = field(default_factory=list)
     # Per analysis-apparaattype de ontdekte metrics (alleen die als sensor bruikbaar zijn)
     metrics: dict[str, list[MetricSpec]] = field(default_factory=dict)
+    # Per analysis-apparaattype alle metrics met historie: "categorie.uri" → (API-eenheid, kind), ook DELTA
+    history_metrics: dict[str, dict[str, tuple[str, str]]] = field(default_factory=dict)
 
     @property
     def has_meter(self) -> bool:
@@ -149,7 +158,9 @@ async def async_discover(client: SolarEdgeMonitoringClient, site_id: int) -> Sit
 
     # Telemetriemetrics per omvormertype (dynamisch)
     metrics: dict[str, list[MetricSpec]] = {}
-    for device_type in sorted({i.analysis_type for i in inverters}):
+    history_metrics: dict[str, dict[str, tuple[str, str]]] = {}
+    history_types = sorted({i.analysis_type for i in inverters}) + ([OPTIMIZER_TYPE] if optimizers else [])
+    for device_type in history_types:
         supported = await _optional(client.analysis.get_device_type_metrics(site_id, device_type))
         specs: list[MetricSpec] = []
         for category in supported.supported_measurements if supported else []:
@@ -158,7 +169,11 @@ async def async_discover(client: SolarEdgeMonitoringClient, site_id: int) -> Sit
                 for m in category.supported_metrics
                 if (s := describe_metric(category.uri, m, category_name=category.display_name)) is not None
             )
-        metrics[device_type] = disambiguate(specs)
+            history_metrics.setdefault(device_type, {}).update(
+                {f"{category.uri}.{m.uri}": (m.units or "", m.kind or "") for m in category.supported_metrics}
+            )
+        if device_type != OPTIMIZER_TYPE:
+            metrics[device_type] = disambiguate(specs)
 
     batteries = list(equipment.storage.details) if equipment and equipment.storage else []
     model = SiteModel(
@@ -172,6 +187,7 @@ async def async_discover(client: SolarEdgeMonitoringClient, site_id: int) -> Sit
         optimizers=optimizers,
         batteries=batteries,
         metrics=metrics,
+        history_metrics=history_metrics,
     )
     _LOGGER.debug(
         "Site %s ontdekt: %d omvormer(s), %d optimizer(s), %d batterij(en), meter=%s, metrics=%s",
@@ -182,6 +198,7 @@ async def async_discover(client: SolarEdgeMonitoringClient, site_id: int) -> Sit
         model.has_meter,
         {t: len(s) for t, s in metrics.items()},
     )
+    _LOGGER.debug("Metrics met historie: %s", history_metrics)
     return model
 
 

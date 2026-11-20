@@ -133,6 +133,9 @@ async def test_options_flow_lists_discovered_metrics(
     await hass.async_block_till_done()
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    assert result["type"] is FlowResultType.MENU
+    assert result["menu_options"] == ["settings", "import_device"]
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "settings"})
     schema = result["data_schema"].schema
     metric_selector = next(v for k, v in schema.items() if str(k) == "telemetry_metrics")
     values = {o["value"] for o in metric_selector.config["options"]}

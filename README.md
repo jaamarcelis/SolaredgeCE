@@ -40,32 +40,50 @@ Devices: **site → omvormer(s) → optimizer(s)**, plus een **batterij** als je
 - **Zonne-energie:** *Energie totaal* van de site, of per omvormer *Lifetime Positive AC Energy*.
 - **Met meter:** de sensoren *Netafname vandaag* en *Teruglevering vandaag*.
 
-### Historie importeren
-De statistieken van **Energie totaal** beginnen pas op het moment dat je de integratie toevoegt. De historie ervoor haal je zo op:
+### Statistieken importeren
+De statistieken van een sensor beginnen pas op het moment dat je de integratie toevoegt. De historie ervoor haal je bij SolarEdge op en importeer je in de statistieken van de sensoren zelf, zodat grafieken en het Energy-dashboard doorlopen.
 
-- de knop **Historie importeren** op het site-device. Die importeert de laatste *N* dagen tot en met vandaag met het gekozen interval; beide stel je in bij de opties (standaard 14 dagen, 1 uur). Het resultaat verschijnt als melding.
-- de actie `solaredge_monitoring.import_energy_history` met het site-device, een begindatum, optioneel een einddatum (standaard vandaag) en een interval. De actie geeft het resultaat terug als response.
+**Via de opties** (Instellingen → SolarEdge Monitoring → Configureren → *Statistieken importeren*):
+1. Kies het device (site, omvormer of optimizer). Alleen devices met sensoren waarvan SolarEdge historie heeft staan in de lijst.
+2. Kies de sensoren van dát device, het interval en de periode (van, en tot en met; leeg = vandaag).
+3. De import draait; daarna zie je per sensor hoeveel rijen er geschreven zijn.
+
+**Via de actie** `solaredge_monitoring.import_statistics` (voor automatiseringen). Laat je `entity_id` weg, dan worden alle sensoren van het device met historie geïmporteerd:
 
 ```yaml
-action: solaredge_monitoring.import_energy_history
+action: solaredge_monitoring.import_statistics
 data:
-  device_id: <id van het site-device>
+  device_id: <id van het device>
+  entity_id:            # optioneel; sensoren van dit device
+    - sensor.inverter_temperature
   start: "2026-08-01"
   end: "2026-11-19"     # optioneel, tot en met; standaard vandaag
   interval: hour        # five_minutes, hour (standaard) of day
 ```
 
+**Knop *Historie importeren*** op het site-device: importeert *Energie totaal* over de laatste *N* dagen tot en met vandaag. Aantal dagen en interval stel je in bij de instellingen (standaard 14 dagen, 1 uur).
+
+Welke sensoren historie hebben (bron: `generate-chart`, per 5 minuten):
+
+| Device | Sensoren |
+|---|---|
+| Site | Energie totaal, Energie vandaag, Actueel vermogen, AC-vermogen (opgeteld over de omvormers) |
+| Omvormer | Vermogen, Energie vandaag, en alle telemetriesensoren met een getal (spanning, stroom, temperatuur, lifetime-energie, …) |
+| Optimizer | Vermogen, Paneelspanning, Uitgangsspanning, Stroom, Energie vandaag |
+
+Batterij en meter hebben geen bron in deze API. Welke metrics er zijn, verschilt per installatie: de lijst komt bij het opstarten uit de API.
+
 | Interval | Wat er geschreven wordt |
 |---|---|
 | `five_minutes` | 5-minutenstatistieken plus uurstatistieken. Home Assistant bewaart 5-minutenstatistieken maar zo lang als `keep_days` van de recorder (standaard 10 dagen); de uurrijen blijven. |
 | `hour` | een uurstatistiek per uur |
-| `day` | één uurstatistiek per dag, in het laatste uur van de dag, met de stand aan het eind van de dag. Genoeg voor dagtotalen in het Energy-dashboard. |
+| `day` | één rij per dag. Bij energie in het laatste uur van de dag (de stand aan het eind van de dag), bij momentwaarden in het eerste uur (het daggemiddelde, minimum en maximum). |
 
 Hoe het werkt:
-- SolarEdge levert de lifetime-teller van de omvormers per 5 minuten; die wordt altijd per 5 minuten opgehaald en daarna per interval omgezet.
-- De sommen sluiten aan op de statistiek vóór de periode. Bestaande statistieken binnen de periode worden met dezelfde reeks herschreven, en alles erna schuift mee, zodat grafieken en het Energy-dashboard zonder sprong doorlopen.
-- Dezelfde import nog een keer doen verandert niets. Je kunt ook later een andere periode of een fijner interval importeren.
-- De periode eindigt uiterlijk bij de laatste uurstatistiek: vanaf daar telt de recorder zelf verder. De sensor moet dus al minstens één uurstatistiek hebben; wacht na het toevoegen van de integratie ongeveer een uur.
+- **Momentwaarden** (vermogen, spanning, temperatuur): gemiddelde, minimum en maximum per periode. Eenheden worden omgerekend naar die van de sensor (bijv. °C → °F).
+- **Tellers en energie**: de som sluit aan op de statistiek vóór de periode. Bestaande statistieken binnen de periode worden met dezelfde reeks herschreven en alles erna schuift mee, zodat er geen sprong ontstaat. *Energie vandaag* begint elke dag weer op 0; de som loopt door.
+- Dezelfde import nog een keer doen verandert niets. Je kunt later ook een andere periode of een fijner interval importeren.
+- Energie eindigt uiterlijk bij de laatste uurstatistiek: vanaf daar telt de recorder zelf verder. Zo'n sensor moet dus al minstens één uurstatistiek hebben; wacht na het toevoegen van de integratie ongeveer een uur.
 
 ### Opties
 **Instellingen → SolarEdge Monitoring → Configureren:**
@@ -83,7 +101,7 @@ custom_components/solaredge_monitoring/
   metrics.py      metric-metadata → device_class / eenheid / state_class
   coordinator.py  6 coordinators met eigen intervallen
   sensor.py  binary_sensor.py  button.py  weather.py  config_flow.py  diagnostics.py
-  history.py      historie-import in de recorderstatistieken; services.py registreert de actie
+  statistics_import.py  historie importeren in de recorderstatistieken; services.py registreert de actie
 tests/api          API-client (draait ook op Windows)
 tests/integration  HA-integratietests (pytest-homeassistant-custom-component)
 tests/live         opt-in contracttests tegen de echte API

@@ -107,7 +107,7 @@
     }
   },
   "services": {
-    "import_energy_history": {
+    "import_statistics": {
       "service": "mdi:database-import"
     }
   }

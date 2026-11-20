@@ -45,7 +45,14 @@
   "options": {
     "step": {
       "init": {
-        "title": "SolarEdge Monitoring options",
+        "title": "SolarEdge Monitoring",
+        "menu_options": {
+          "settings": "Settings",
+          "import_device": "Import statistics"
+        }
+      },
+      "settings": {
+        "title": "SolarEdge Monitoring settings",
         "data": {
           "live_interval": "Live power flow interval",
           "energy_interval": "Energy interval",
@@ -62,7 +69,39 @@
           "history_days": "The button imports this many days up to and including today.",
           "history_interval": "5 minutes also writes short-term statistics; Home Assistant keeps those for the recorder's keep_days (default 10 days)."
         }
+      },
+      "import_device": {
+        "title": "Import statistics",
+        "description": "Choose the device. Only devices with sensors for which SolarEdge has history are listed.",
+        "data": {
+          "device": "Device"
+        }
+      },
+      "import_metrics": {
+        "title": "Import statistics for {device}",
+        "description": "Choose the sensors, the interval and the period. History is fetched per 5 minutes from SolarEdge.",
+        "data": {
+          "metrics": "Sensors",
+          "interval": "Interval",
+          "start": "Start date",
+          "end": "End date (empty = today)"
+        },
+        "data_description": {
+          "interval": "5 minutes also writes short-term statistics; Home Assistant keeps those for the recorder's keep_days (default 10 days)."
+        }
       }
+    },
+    "progress": {
+      "importing": "Fetching history from SolarEdge and importing it into the statistics…"
+    },
+    "abort": {
+      "import_finished": "Import finished.\n\n{summary}",
+      "import_failed": "Import failed: {error}",
+      "no_importable_devices": "No device of this installation has sensors with history."
+    },
+    "error": {
+      "invalid_period": "The start date must not be after the end date.",
+      "no_metrics": "Choose at least one sensor."
     }
   },
   "entity": {
@@ -251,17 +290,8 @@
     "recorder_not_running": {
       "message": "The recorder is not running."
     },
-    "energy_entity_not_found": {
-      "message": "The Lifetime energy sensor of this site was not found."
-    },
-    "energy_entity_disabled": {
-      "message": "{entity_id} is disabled; enable it first."
-    },
     "no_statistics_yet": {
-      "message": "{entity_id} has no hourly statistics yet. Try again after the integration has run for an hour."
-    },
-    "no_inverters": {
-      "message": "This site has no inverters to fetch history for."
+      "message": "{entity_id} has no hourly statistics yet. Try again once the recorder has written one (about an hour)."
     },
     "no_history_data": {
       "message": "SolarEdge returned no lifetime energy for this period."
@@ -272,24 +302,40 @@
     "import_in_progress": {
       "message": "An import is already running for this site."
     },
-    "not_a_site_device": {
-      "message": "Select the site device of a SolarEdge Monitoring installation."
-    },
     "entry_not_loaded": {
       "message": "The SolarEdge Monitoring integration for this device is not loaded."
     },
     "invalid_period": {
       "message": "The start date must not be after the end date."
+    },
+    "not_a_solaredge_device": {
+      "message": "Select a device of SolarEdge Monitoring."
+    },
+    "no_importable_metrics": {
+      "message": "This device has no sensors with history in SolarEdge."
+    },
+    "metric_not_importable": {
+      "message": "No history available for: {entity_ids}. Choose sensors of the selected device."
+    },
+    "statistics_type_mismatch": {
+      "message": "The existing statistics of {entity_id} are of a different type."
+    },
+    "unit_mismatch": {
+      "message": "The unit of {entity_id} ({unit}) cannot be converted from {api_unit}."
     }
   },
   "services": {
-    "import_energy_history": {
-      "name": "Import energy history",
-      "description": "Fetches the lifetime energy of the inverters from SolarEdge for a period and imports it into the statistics of the site's Lifetime energy sensor. Existing statistics are rewritten consistently and later sums are shifted, so there is no jump.",
+    "import_statistics": {
+      "name": "Import statistics",
+      "description": "Fetches the history of a device's sensors from SolarEdge and imports it into their statistics. Existing statistics in the period are rewritten consistently and later sums are shifted, so there is no jump.",
       "fields": {
         "device_id": {
-          "name": "Site",
-          "description": "The SolarEdge site device."
+          "name": "Device",
+          "description": "A SolarEdge Monitoring device (site, inverter or optimizer)."
+        },
+        "entity_id": {
+          "name": "Sensors",
+          "description": "Sensors of this device to import. Empty: all sensors of the device with history."
         },
         "start": {
           "name": "Start date",
@@ -297,11 +343,11 @@
         },
         "end": {
           "name": "End date",
-          "description": "Last day to import, inclusive. Default: today. Ends at the last hourly statistic of the recorder."
+          "description": "Last day to import, inclusive. Empty: today. Sums end at the last hourly statistic of the recorder."
         },
         "interval": {
           "name": "Interval",
-          "description": "5 minutes (also short-term statistics), 1 hour, or 1 day (one row at the end of each day)."
+          "description": "5 minutes (also short-term statistics), 1 hour, or 1 day (one row per day)."
         }
       }
     }

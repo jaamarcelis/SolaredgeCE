@@ -71,6 +71,19 @@ def site_responses(*, has_storage: bool = False, has_meter: bool = False) -> dic
         },
         r"layout/information/optimizers": load_fixture("optimizers-info.json"),
         r"device-types/ONE_PHASE_INVERTER/metrics/supported": load_fixture("inverter-metrics.json"),
+        r"device-types/OPTIMIZER/metrics/supported": {
+            "supportedMeasurements": [
+                {
+                    "uri": "measurements",
+                    "displayName": "Optimizer measurements",
+                    "supportedMetrics": [
+                        {"uri": "output_power", "dataType": "DECIMAL", "kind": "DELTA", "units": "W"},  # zo meldt SolarEdge het
+                        {"uri": "panel_voltage", "dataType": "DECIMAL", "kind": "GAUGE", "units": "V"},
+                        {"uri": "energy_since_last_telem", "dataType": "DECIMAL", "kind": "DELTA", "units": "Wh"},
+                    ],
+                }
+            ]
+        },
         r"power-flow/v2/sites": power_flow,
         r"live-power/sites": {"currentAcPower": 1180.0, "maxAcPower": 3700.0},
         r"sitelist/sitesMeasurements": load_fixture("sites-measurements.json"),

@@ -57,7 +57,7 @@ Legenda:
 | Communiceert (binary) | `power-flow/v2` → `isCommunicating` | connectivity | | | live | ✓ | D |
 | Vermogen beperkt (binary) | `curtailment` → `powerLimited` (attr. `reasons`) | problem | | | energy | ✓ | |
 | Alerts (binary) | `alertTotalCount > 0` | problem | | | info | ✓ | |
-| Historie importeren (knop) | `generate-chart` → `measurements.lifetime_positive_ac_energy` per 5 min, zie README *Historie importeren* | | | | – | ✓ | C |
+| Historie importeren (knop) | `generate-chart` → `measurements.lifetime_positive_ac_energy` per 5 min, zie README *Statistieken importeren* | | | | – | ✓ | C |
 
 **Alleen met een consumptie-/netmeter** (`components.hasConsumptionAndGrid`):
 
