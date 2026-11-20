@@ -5,7 +5,7 @@
 # De integratie wordt live gemount; de HA-configuratie (incl. onboarding-account) staat in ha-dev/config.
 services:
   homeassistant:
-    image: ghcr.io/home-assistant/home-assistant:2026.10.4
+    image: ghcr.io/home-assistant/home-assistant:2026.11.2
     container_name: solaredge-ha-dev
     ports:
       - "8123:8123"
