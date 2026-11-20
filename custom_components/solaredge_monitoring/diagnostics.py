@@ -56,6 +56,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: SolarEd
             "model": _plain(runtime.model),
             "not_applicable": {c.name: sorted(c.not_applicable) for c in runtime.coordinators},
             "data": {c.name: _plain(c.data) for c in runtime.coordinators},
+            "history_limits_learned": runtime.history_limits.as_dict() if runtime.history_limits else None,
         },
         TO_REDACT,
     )

@@ -24,8 +24,10 @@ from .const import (
     DEFAULT_HISTORY_DAYS,
     DOMAIN,
     HISTORY_INTERVAL_HOUR,
+    HISTORY_INTERVAL_MAX,
     HISTORY_INTERVALS,
 )
+from .history_limits import HistoryLimits
 from .statistics_import import (
     HistoryImportError,
     ImportableMetric,
@@ -49,7 +51,7 @@ SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_DEVICE_ID): cv.string,
         vol.Optional(ATTR_ENTITY_ID): cv.entity_ids,  # leeg = alle sensoren van het device met historie
-        vol.Required(ATTR_START): cv.date,
+        vol.Optional(ATTR_START): cv.date,  # leeg: bij max de eerste productiedag, anders history_days terug
         vol.Optional(ATTR_END): cv.date,  # standaard vandaag
         vol.Optional(ATTR_INTERVAL, default=HISTORY_INTERVAL_HOUR): vol.In(HISTORY_INTERVALS),
     }
@@ -58,14 +60,28 @@ SCHEMA = vol.Schema(
 _NOTIFY = {
     "nl": {
         "title": "SolarEdge: historie geïmporteerd",
-        "line": "- {name}: {hourly} uurrijen, {short_term} 5-minutenrijen",
+        "line": "- {name}: {hourly} uurrijen, {short_term} 5-minutenrijen{first}",
+        "first": ", vanaf {date}",
         "done": "Van {start} tot {end}:\n{lines}",
+        "notes": "\n\nMeldingen van SolarEdge:\n{notes}",
+        "age_limit": "- {metric} per {granularity}: alleen de laatste {days} dagen (ouder overgeslagen)",
+        "age_limit_from": "- {metric}: pas beschikbaar vanaf {date}",
+        "downsampled": "- {metric}: per request hoogstens {days} dagen per 5 minuten (anders dagwaarden)",
+        "no_day_source": "- {metric}: geen dagwaarden; alleen wat per 5 minuten kan",
+        "message": "- {metric} ({granularity}): {message}",
         "failed_title": "SolarEdge: historie importeren mislukt",
     },
     "en": {
         "title": "SolarEdge: history imported",
-        "line": "- {name}: {hourly} hourly rows, {short_term} 5-minute rows",
+        "line": "- {name}: {hourly} hourly rows, {short_term} 5-minute rows{first}",
+        "first": ", from {date}",
         "done": "From {start} to {end}:\n{lines}",
+        "notes": "\n\nSolarEdge limits:\n{notes}",
+        "age_limit": "- {metric} per {granularity}: only the last {days} days (older skipped)",
+        "age_limit_from": "- {metric}: only available from {date}",
+        "downsampled": "- {metric}: at most {days} days per request at 5 minutes (otherwise daily values)",
+        "no_day_source": "- {metric}: no daily values; only what is available per 5 minutes",
+        "message": "- {metric} ({granularity}): {message}",
         "failed_title": "SolarEdge: history import failed",
     },
 }
@@ -107,21 +123,29 @@ async def async_run_import(
     hass: HomeAssistant,
     entry: SolarEdgeConfigEntry,
     metrics: list[ImportableMetric],
-    start: date,
+    start: date | None,
     end: date,
     interval: Interval,
 ) -> ImportResult:
-    """Import met een lock per config entry; API-fouten worden vertaalbare fouten."""
+    """Import met een lock per config entry; API-fouten worden vertaalbare fouten. Geleerde limieten worden bewaard."""
     runtime = entry.runtime_data
     if runtime.history_lock.locked():
         raise HistoryImportError("import_in_progress")
     async with runtime.history_lock:
+        if runtime.history_limits is None:
+            runtime.history_limits = HistoryLimits(hass, entry.entry_id)
+            await runtime.history_limits.async_load()
+        limits: HistoryLimits = runtime.history_limits
+        if start is None and interval != HISTORY_INTERVAL_MAX:
+            start = end - timedelta(days=int(entry.options.get(CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS)))
         try:
-            return await async_import_history(hass, runtime.client, runtime.model, metrics, start, end, interval)
+            return await async_import_history(hass, runtime.client, runtime.model, metrics, start, end, interval, limits)
         except HistoryImportError:
             raise
         except (SolarEdgeError, aiohttp.ClientError, TimeoutError) as err:
             raise HistoryImportError("fetch_failed", error=str(err) or type(err).__name__) from err
+        finally:
+            await limits.async_save()
 
 
 def button_period(entry: SolarEdgeConfigEntry) -> tuple[date, date, Interval]:
@@ -135,13 +159,38 @@ def summary(hass: HomeAssistant, result: ImportResult) -> str:
     """Leesbare samenvatting voor een melding of de opties-flow."""
     texts = _NOTIFY.get(hass.config.language.split("-", 1)[0].lower(), _NOTIFY["en"])
     lines = "\n".join(
-        texts["line"].format(name=m.name, hourly=m.hourly_rows, short_term=m.short_term_rows) for m in result.metrics
+        texts["line"].format(
+            name=m.name,
+            hourly=m.hourly_rows,
+            short_term=m.short_term_rows,
+            first=texts["first"].format(date=dt_util.as_local(m.first).date().isoformat()) if m.first else "",
+        )
+        for m in result.metrics
     )
-    return texts["done"].format(
+    text = texts["done"].format(
         start=dt_util.as_local(result.start).strftime("%Y-%m-%d %H:%M"),
         end=dt_util.as_local(result.end).strftime("%Y-%m-%d %H:%M"),
         lines=lines,
     )
+    notes: list[str] = []
+    for metric in result.metrics:
+        for note in metric.notes:
+            line = _note_text(texts, note)
+            if line not in notes:
+                notes.append(line)
+    return text + (texts["notes"].format(notes="\n".join(notes)) if notes else "")
+
+
+def _note_text(texts: dict[str, str], note: dict) -> str:
+    """Eén melding leesbaar."""
+    values = {"metric": note.get("metric", ""), "granularity": note.get("granularity", ""), **note}
+    if note["code"] == "age_limit" and "from" in note:
+        return texts["age_limit_from"].format(date=note["from"], **{k: v for k, v in values.items() if k != "from"})
+    template = texts.get(note["code"], texts["message"])
+    try:
+        return template.format(**values)
+    except KeyError:
+        return texts["message"].format(**{**values, "message": note.get("message", note["code"])})
 
 
 def notify_result(hass: HomeAssistant, entry: SolarEdgeConfigEntry, result: ImportResult | None, error: str | None) -> None:
@@ -160,9 +209,9 @@ def async_setup_services(hass: HomeAssistant) -> None:
     async def import_statistics(call: ServiceCall) -> ServiceResponse:
         device_id = call.data[ATTR_DEVICE_ID]
         entry = entry_for_device(hass, device_id)
-        start: date = call.data[ATTR_START]
+        start: date | None = call.data.get(ATTR_START)
         end: date = call.data.get(ATTR_END) or dt_util.now().date()
-        if start > end:
+        if start is not None and start > end:
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key="invalid_period")
         metrics = select_metrics(hass, entry, device_id, call.data.get(ATTR_ENTITY_ID))
         result = await async_run_import(hass, entry, metrics, start, end, call.data[ATTR_INTERVAL])

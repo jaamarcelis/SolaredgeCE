@@ -15,7 +15,7 @@ import_statistics:
             integration: solaredge_monitoring
             domain: sensor
     start:
-      required: true
+      required: false
       selector:
         date:
     end:
@@ -29,6 +29,7 @@ import_statistics:
         select:
           translation_key: interval
           options:
+            - max
             - five_minutes
             - hour
             - day

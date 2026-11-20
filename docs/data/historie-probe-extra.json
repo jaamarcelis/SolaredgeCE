@@ -1,0 +1,1699 @@
+{
+ "downsample": [
+  [
+   "lifetime_positive_ac_energy",
+   "FIVE_MINUTES",
+   31,
+   "ok 5min (3673 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "FIVE_MINUTES",
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "FIVE_MINUTES",
+   33,
+   "ok 1d (34 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "FIVE_MINUTES",
+   35,
+   "ok 1d (36 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "FIVE_MINUTES",
+   40,
+   "ok 1d (41 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "FIVE_MINUTES",
+   45,
+   "ok 1d (46 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "FIVE_MINUTES",
+   60,
+   "ok 1d (61 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "FIVE_MINUTES",
+   90,
+   "ok 1d (91 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "QUARTER_HOUR",
+   31,
+   "ok 15min (1284 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "QUARTER_HOUR",
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "QUARTER_HOUR",
+   33,
+   "ok 1d (34 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "QUARTER_HOUR",
+   35,
+   "ok 1d (36 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "QUARTER_HOUR",
+   40,
+   "ok 1d (41 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "QUARTER_HOUR",
+   45,
+   "ok 1d (46 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "QUARTER_HOUR",
+   60,
+   "ok 1d (61 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "QUARTER_HOUR",
+   90,
+   "ok 1d (91 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "HOUR",
+   31,
+   "ok 60min (394 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "HOUR",
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "HOUR",
+   33,
+   "ok 1d (34 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "HOUR",
+   35,
+   "ok 1d (36 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "HOUR",
+   40,
+   "ok 1d (41 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "HOUR",
+   45,
+   "ok 1d (46 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "HOUR",
+   60,
+   "ok 1d (61 waarden)"
+  ],
+  [
+   "lifetime_positive_ac_energy",
+   "HOUR",
+   90,
+   "ok 1d (91 waarden)"
+  ],
+  [
+   "temperature",
+   "FIVE_MINUTES",
+   31,
+   "ok 5min (3673 waarden)"
+  ],
+  [
+   "temperature",
+   "FIVE_MINUTES",
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "temperature",
+   "FIVE_MINUTES",
+   33,
+   "ok 1d (34 waarden)"
+  ],
+  [
+   "temperature",
+   "FIVE_MINUTES",
+   35,
+   "ok 1d (36 waarden)"
+  ],
+  [
+   "temperature",
+   "FIVE_MINUTES",
+   40,
+   "ok 1d (41 waarden)"
+  ],
+  [
+   "temperature",
+   "FIVE_MINUTES",
+   45,
+   "ok 1d (46 waarden)"
+  ],
+  [
+   "temperature",
+   "FIVE_MINUTES",
+   60,
+   "ok 1d (61 waarden)"
+  ],
+  [
+   "temperature",
+   "FIVE_MINUTES",
+   90,
+   "ok 1d (91 waarden)"
+  ],
+  [
+   "temperature",
+   "QUARTER_HOUR",
+   31,
+   "ok 15min (1284 waarden)"
+  ],
+  [
+   "temperature",
+   "QUARTER_HOUR",
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "temperature",
+   "QUARTER_HOUR",
+   33,
+   "ok 1d (34 waarden)"
+  ],
+  [
+   "temperature",
+   "QUARTER_HOUR",
+   35,
+   "ok 1d (36 waarden)"
+  ],
+  [
+   "temperature",
+   "QUARTER_HOUR",
+   40,
+   "ok 1d (41 waarden)"
+  ],
+  [
+   "temperature",
+   "QUARTER_HOUR",
+   45,
+   "ok 1d (46 waarden)"
+  ],
+  [
+   "temperature",
+   "QUARTER_HOUR",
+   60,
+   "ok 1d (61 waarden)"
+  ],
+  [
+   "temperature",
+   "QUARTER_HOUR",
+   90,
+   "ok 1d (91 waarden)"
+  ],
+  [
+   "temperature",
+   "HOUR",
+   31,
+   "ok 60min (394 waarden)"
+  ],
+  [
+   "temperature",
+   "HOUR",
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "temperature",
+   "HOUR",
+   33,
+   "ok 1d (34 waarden)"
+  ],
+  [
+   "temperature",
+   "HOUR",
+   35,
+   "ok 1d (36 waarden)"
+  ],
+  [
+   "temperature",
+   "HOUR",
+   40,
+   "ok 1d (41 waarden)"
+  ],
+  [
+   "temperature",
+   "HOUR",
+   45,
+   "ok 1d (46 waarden)"
+  ],
+  [
+   "temperature",
+   "HOUR",
+   60,
+   "ok 1d (61 waarden)"
+  ],
+  [
+   "temperature",
+   "HOUR",
+   90,
+   "ok 1d (91 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "FIVE_MINUTES",
+   31,
+   "ok 5min (3858 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "FIVE_MINUTES",
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "FIVE_MINUTES",
+   33,
+   "ok 1d (34 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "FIVE_MINUTES",
+   35,
+   "ok 1d (36 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "FIVE_MINUTES",
+   40,
+   "ok 1d (41 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "FIVE_MINUTES",
+   45,
+   "ok 1d (46 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "FIVE_MINUTES",
+   60,
+   "ok 1d (61 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "FIVE_MINUTES",
+   90,
+   "ok 1d (91 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "QUARTER_HOUR",
+   31,
+   "ok 15min (1340 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "QUARTER_HOUR",
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "QUARTER_HOUR",
+   33,
+   "ok 1d (34 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "QUARTER_HOUR",
+   35,
+   "ok 1d (36 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "QUARTER_HOUR",
+   40,
+   "ok 1d (41 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "QUARTER_HOUR",
+   45,
+   "ok 1d (46 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "QUARTER_HOUR",
+   60,
+   "ok 1d (61 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "QUARTER_HOUR",
+   90,
+   "ok 1d (91 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "HOUR",
+   31,
+   "ok 60min (408 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "HOUR",
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "HOUR",
+   33,
+   "ok 1d (34 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "HOUR",
+   35,
+   "ok 1d (36 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "HOUR",
+   40,
+   "ok 1d (41 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "HOUR",
+   45,
+   "ok 1d (46 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "HOUR",
+   60,
+   "ok 1d (61 waarden)"
+  ],
+  [
+   "positive_ac_energy_since_last_telemetry",
+   "HOUR",
+   90,
+   "ok 1d (91 waarden)"
+  ]
+ ],
+ "day_age": [
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   60,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   60,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   60,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   89,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   89,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   89,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   91,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   91,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   91,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   200,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   200,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   200,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   364,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   364,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   364,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   366,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   366,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   366,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   731,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   731,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   731,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   1500,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   1500,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   1500,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   2350,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   2350,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   2350,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   300,
+   "5min/1d",
+   "ok 5min (112 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   364,
+   "5min/1d",
+   "ok 5min (111 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "ac_voltage",
+   366,
+   "5min/1d",
+   "ok 5min (106 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   60,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   60,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   60,
+   32,
+   "DATASET_TOO_LARGE: One phase inverter power factor charts are limited to 7 days. For larger ranges, please use the export tool."
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   89,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   89,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   89,
+   32,
+   "DATASET_TOO_LARGE: One phase inverter power factor charts are limited to 7 days. For larger ranges, please use the export tool."
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   91,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   91,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   91,
+   32,
+   "DATASET_TOO_LARGE: One phase inverter power factor charts are limited to 7 days. For larger ranges, please use the export tool."
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   200,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   200,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   200,
+   32,
+   "DATASET_TOO_LARGE: One phase inverter power factor charts are limited to 7 days. For larger ranges, please use the export tool."
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   364,
+   1,
+   "ok 1d (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   364,
+   7,
+   "ok 1d (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   364,
+   32,
+   "DATASET_TOO_LARGE: One phase inverter power factor charts are limited to 7 days. For larger ranges, please use the export tool."
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   366,
+   1,
+   "ok 1d (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   366,
+   7,
+   "ok 1d (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   366,
+   32,
+   "DATASET_TOO_LARGE: One phase inverter power factor charts are limited to 7 days. For larger ranges, please use the export tool."
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   731,
+   1,
+   "ok 1d (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   731,
+   7,
+   "ok 1d (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   731,
+   32,
+   "DATASET_TOO_LARGE: One phase inverter power factor charts are limited to 7 days. For larger ranges, please use the export tool."
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   1500,
+   1,
+   "ok 1d (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   1500,
+   7,
+   "ok 1d (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   1500,
+   32,
+   "DATASET_TOO_LARGE: One phase inverter power factor charts are limited to 7 days. For larger ranges, please use the export tool."
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   2350,
+   1,
+   "ok 1d (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   2350,
+   7,
+   "ok 1d (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   2350,
+   32,
+   "DATASET_TOO_LARGE: One phase inverter power factor charts are limited to 7 days. For larger ranges, please use the export tool."
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   300,
+   "5min/1d",
+   "ok 5min (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   364,
+   "5min/1d",
+   "ok 5min (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "power_factor",
+   366,
+   "5min/1d",
+   "ok 5min (0 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   60,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   60,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   60,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   89,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   89,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   89,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   91,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   91,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   91,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   200,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   200,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   200,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   364,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   364,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   364,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   366,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   366,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   366,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   731,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   731,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   731,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   1500,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   1500,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   1500,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   2350,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   2350,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   2350,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   300,
+   "5min/1d",
+   "ok 5min (112 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   364,
+   "5min/1d",
+   "ok 5min (111 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "lifetime_positive_ac_energy",
+   366,
+   "5min/1d",
+   "ok 5min (106 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   60,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   60,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   60,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   89,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   89,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   89,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   91,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   91,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   91,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   200,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   200,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   200,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   364,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   364,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   364,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   366,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   366,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   366,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   731,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   731,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   731,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   1500,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   1500,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   1500,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   2350,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   2350,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   2350,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   300,
+   "5min/1d",
+   "ok 5min (112 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   364,
+   "5min/1d",
+   "ok 5min (111 waarden)"
+  ],
+  [
+   "ONE_PHASE_INVERTER",
+   "temperature",
+   366,
+   "5min/1d",
+   "ok 5min (106 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   60,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   60,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   60,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   89,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   89,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   89,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   91,
+   1,
+   "DATASET_TOO_LARGE: Optimizer output power data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   91,
+   7,
+   "DATASET_TOO_LARGE: Optimizer output power data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   91,
+   32,
+   "DATASET_TOO_LARGE: Optimizer output power data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   200,
+   1,
+   "DATASET_TOO_LARGE: Optimizer output power data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   200,
+   7,
+   "DATASET_TOO_LARGE: Optimizer output power data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   200,
+   32,
+   "DATASET_TOO_LARGE: Optimizer output power data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   364,
+   1,
+   "DATASET_TOO_LARGE: Optimizer output power data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   364,
+   7,
+   "DATASET_TOO_LARGE: Optimizer output power data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   364,
+   32,
+   "DATASET_TOO_LARGE: Optimizer output power data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   366,
+   1,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   366,
+   7,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   366,
+   32,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   731,
+   1,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   731,
+   7,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   731,
+   32,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   1500,
+   1,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   1500,
+   7,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   1500,
+   32,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   2350,
+   1,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   2350,
+   7,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   2350,
+   32,
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   300,
+   "5min/1d",
+   "DATASET_TOO_LARGE: Optimizer output power data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   364,
+   "5min/1d",
+   "DATASET_TOO_LARGE: Optimizer output power data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "output_power",
+   366,
+   "5min/1d",
+   "EXPORT_LIMIT_REACHED: Optimizer output power data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   60,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   60,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   60,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   89,
+   1,
+   "ok 1d (2 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   89,
+   7,
+   "ok 1d (8 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   89,
+   32,
+   "ok 1d (33 waarden)"
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   91,
+   1,
+   "DATASET_TOO_LARGE: Optimizer panel voltage data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   91,
+   7,
+   "DATASET_TOO_LARGE: Optimizer panel voltage data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   91,
+   32,
+   "DATASET_TOO_LARGE: Optimizer panel voltage data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   200,
+   1,
+   "DATASET_TOO_LARGE: Optimizer panel voltage data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   200,
+   7,
+   "DATASET_TOO_LARGE: Optimizer panel voltage data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   200,
+   32,
+   "DATASET_TOO_LARGE: Optimizer panel voltage data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   364,
+   1,
+   "DATASET_TOO_LARGE: Optimizer panel voltage data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   364,
+   7,
+   "DATASET_TOO_LARGE: Optimizer panel voltage data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   364,
+   32,
+   "DATASET_TOO_LARGE: Optimizer panel voltage data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   366,
+   1,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   366,
+   7,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   366,
+   32,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   731,
+   1,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   731,
+   7,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   731,
+   32,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   1500,
+   1,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   1500,
+   7,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   1500,
+   32,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   2350,
+   1,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   2350,
+   7,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   2350,
+   32,
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   300,
+   "5min/1d",
+   "DATASET_TOO_LARGE: Optimizer panel voltage data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   364,
+   "5min/1d",
+   "DATASET_TOO_LARGE: Optimizer panel voltage data older than 90 days is not available in the chart view. For older data, please use the export tool."
+  ],
+  [
+   "OPTIMIZER",
+   "panel_voltage",
+   366,
+   "5min/1d",
+   "EXPORT_LIMIT_REACHED: Optimizer panel voltage data is only available for the last 365 days. Please select a more recent date range."
+  ]
+ ],
+ "js_files_scanned": 29
+}

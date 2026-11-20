@@ -83,11 +83,11 @@
         "data": {
           "metrics": "Sensors",
           "interval": "Interval",
-          "start": "Start date",
+          "start": "Start date (empty = automatic)",
           "end": "End date (empty = today)"
         },
         "data_description": {
-          "interval": "5 minutes also writes short-term statistics; Home Assistant keeps those for the recorder's keep_days (default 10 days)."
+          "interval": "Maximum: first all 5-minute data SolarEdge provides, then daily values back to the first production day. 5 minutes also writes short-term statistics; Home Assistant keeps those for the recorder's keep_days (default 10 days)."
         }
       }
     },
@@ -342,7 +342,7 @@
         },
         "start": {
           "name": "Start date",
-          "description": "First day to import (local time)."
+          "description": "First day to import (local time). Empty: the first production day for Maximum, otherwise the number of days from the settings."
         },
         "end": {
           "name": "End date",
@@ -350,7 +350,7 @@
         },
         "interval": {
           "name": "Interval",
-          "description": "5 minutes (also short-term statistics), 1 hour, or 1 day (one row per day)."
+          "description": "Maximum: per 5 minutes as far back as SolarEdge allows, before that per day back to the first production day. Or a fixed interval: 5 minutes (also short-term statistics), 1 hour, 1 day."
         }
       }
     }
@@ -358,6 +358,7 @@
   "selector": {
     "history_interval": {
       "options": {
+        "max": "Maximum (as accurate as possible)",
         "five_minutes": "5 minutes",
         "hour": "1 hour",
         "day": "1 day"
@@ -365,6 +366,7 @@
     },
     "interval": {
       "options": {
+        "max": "Maximum (as accurate as possible)",
         "five_minutes": "5 minutes",
         "hour": "1 hour",
         "day": "1 day"

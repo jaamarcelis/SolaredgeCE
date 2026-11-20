@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Mapping
-from datetime import date, timedelta
+from datetime import date
 import logging
 from typing import Any
 
@@ -62,6 +62,7 @@ from .const import (
     DEFAULT_TELEMETRY_INTERVAL,
     DOMAIN,
     HISTORY_INTERVAL_HOUR,
+    HISTORY_INTERVAL_MAX,
     HISTORY_INTERVALS,
     MAX_HISTORY_DAYS,
 )
@@ -334,10 +335,10 @@ class SolarEdgeOptionsFlow(OptionsFlowWithReload):
         errors: dict[str, str] = {}
         today = dt_util.now().date()
         if user_input is not None:
-            start: date = cv.date(user_input[CONF_START])
+            start: date | None = cv.date(user_input[CONF_START]) if user_input.get(CONF_START) else None
             end: date = cv.date(user_input[CONF_END]) if user_input.get(CONF_END) else today
             chosen = [m for m in metrics if m.entity_id in user_input[CONF_METRICS]]
-            if start > end:
+            if start is not None and start > end:
                 errors[CONF_END] = "invalid_period"
             elif not chosen:
                 errors[CONF_METRICS] = "no_metrics"
@@ -348,17 +349,16 @@ class SolarEdgeOptionsFlow(OptionsFlowWithReload):
                 return await self.async_step_import_progress()
 
         options = self.config_entry.options
-        default_start = today - timedelta(days=int(options.get(CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS)))
         metric_options = [SelectOptionDict(value=m.entity_id, label=_metric_label(self.hass, m)) for m in metrics]
         schema = vol.Schema(
             {
                 vol.Required(CONF_METRICS): SelectSelector(SelectSelectorConfig(options=metric_options, multiple=True)),
-                vol.Required(CONF_INTERVAL, default=options.get(CONF_HISTORY_INTERVAL, HISTORY_INTERVAL_HOUR)): SelectSelector(
+                vol.Required(CONF_INTERVAL, default=options.get(CONF_HISTORY_INTERVAL, HISTORY_INTERVAL_MAX)): SelectSelector(
                     SelectSelectorConfig(
                         options=list(HISTORY_INTERVALS), translation_key=CONF_HISTORY_INTERVAL, mode=SelectSelectorMode.LIST
                     )
                 ),
-                vol.Required(CONF_START, default=default_start.isoformat()): DateSelector(),
+                vol.Optional(CONF_START): DateSelector(),
                 vol.Optional(CONF_END): DateSelector(),
             }
         )

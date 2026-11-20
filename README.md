@@ -56,9 +56,9 @@ data:
   device_id: <id van het device>
   entity_id:            # optioneel; sensoren van dit device
     - sensor.inverter_temperature
-  start: "2026-08-01"
+  start: "2026-08-01"   # optioneel; leeg bij max = eerste productiedag
   end: "2026-11-19"     # optioneel, tot en met; standaard vandaag
-  interval: hour        # five_minutes, hour (standaard) of day
+  interval: max         # max, five_minutes, hour (standaard) of day
 ```
 
 **Knop *Historie importeren*** op het site-device: importeert *Energie totaal* over de laatste *N* dagen tot en met vandaag. Aantal dagen en interval stel je in bij de instellingen (standaard 14 dagen, 1 uur).
@@ -75,11 +75,12 @@ Batterij en meter hebben geen bron in deze API. Welke metrics er zijn, verschilt
 
 | Interval | Opgehaald | Wat er geschreven wordt |
 |---|---|---|
+| `max` (*Maximaal*) | eerst per 5 minuten, daarvóór per dag | zo veel en zo nauwkeurig mogelijk: uurrijen (en 5-minutenrijen binnen `keep_days`) zo ver terug als SolarEdge 5-minutendata levert, daarvóór één rij per dag tot de eerste productiedag. Laat je de begindatum leeg, dan begint hij bij de eerste productiedag. |
 | `five_minutes` | per 5 minuten | 5-minutenstatistieken plus uurstatistieken. Home Assistant bewaart 5-minutenstatistieken maar zo lang als `keep_days` van de recorder (standaard 10 dagen); de uurrijen blijven. |
 | `hour` | per 5 minuten | een uurstatistiek per uur |
 | `day` | per dag | één rij per dag. Bij energie in het laatste uur van de dag (de stand aan het eind van de dag), bij momentwaarden in het eerste uur (alleen het daggemiddelde; minimum en maximum levert SolarEdge per dag niet). |
 
-SolarEdge levert gegevens per 5 minuten of per uur alleen voor de **laatste 730 dagen**. Wil je verder terug, kies dan `day`; daarmee gaat een import vanaf de ingebruikname van je installatie in een paar requests.
+SolarEdge levert gegevens per 5 minuten of per uur alleen voor de **laatste 730 dagen** (omvormers), en optimizers alleen voor de **laatste 90 dagen**. Per request mag de periode beperkt zijn (31 dagen fijn, 32 dagen per dag voor momentwaarden, 14 dagen voor optimizers). De import houdt daar rekening mee, leert nieuwe grenzen uit de foutmeldingen en meldt in het resultaat wat er is overgeslagen. Alle gemeten limieten, foutmeldingen en de exporttool staan in **[docs/historie-limieten.md](docs/historie-limieten.md)**.
 
 Hoe het werkt:
 - **Momentwaarden** (vermogen, spanning, temperatuur): gemiddelde, minimum en maximum per periode. Eenheden worden omgerekend naar die van de sensor (bijv. °C → °F).

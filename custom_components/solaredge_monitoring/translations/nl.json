@@ -83,11 +83,11 @@
         "data": {
           "metrics": "Sensoren",
           "interval": "Interval",
-          "start": "Van",
+          "start": "Van (leeg = automatisch)",
           "end": "Tot en met (leeg = vandaag)"
         },
         "data_description": {
-          "interval": "5 minuten schrijft ook kortetermijnstatistieken; Home Assistant bewaart die zo lang als keep_days van de recorder (standaard 10 dagen)."
+          "interval": "Maximaal: eerst alle 5-minutendata die SolarEdge levert, daarvóór dagwaarden tot de eerste productiedag. 5 minuten schrijft ook kortetermijnstatistieken; Home Assistant bewaart die zo lang als keep_days van de recorder (standaard 10 dagen)."
         }
       }
     },
@@ -342,7 +342,7 @@
         },
         "start": {
           "name": "Van",
-          "description": "Eerste dag om te importeren (lokale tijd)."
+          "description": "Eerste dag om te importeren (lokale tijd). Leeg: bij Maximaal de eerste productiedag, anders het aantal dagen uit de instellingen."
         },
         "end": {
           "name": "Tot en met",
@@ -350,7 +350,7 @@
         },
         "interval": {
           "name": "Interval",
-          "description": "5 minuten (ook kortetermijnstatistieken), 1 uur, of 1 dag (één rij per dag)."
+          "description": "Maximaal: per 5 minuten zo ver terug als SolarEdge toestaat, daarvóór per dag tot de eerste productiedag. Of een vast interval: 5 minuten (ook kortetermijnstatistieken), 1 uur, 1 dag."
         }
       }
     }
@@ -358,6 +358,7 @@
   "selector": {
     "history_interval": {
       "options": {
+        "max": "Maximaal (zo nauwkeurig mogelijk)",
         "five_minutes": "5 minuten",
         "hour": "1 uur",
         "day": "1 dag"
@@ -365,6 +366,7 @@
     },
     "interval": {
       "options": {
+        "max": "Maximaal (zo nauwkeurig mogelijk)",
         "five_minutes": "5 minuten",
         "hour": "1 uur",
         "day": "1 dag"

@@ -12,7 +12,12 @@ Het interval bepaalt de rijen:
 - ``five_minutes``: kortetermijnstatistieken per 5 minuten (de recorder ruimt die na ``keep_days`` op) plus uurrijen;
 - ``hour``: een uurrij per uur;
 - ``day``: één rij per dag. Bij sommen staat die in het laatste uur van de (lokale) dag met de stand aan het eind
-  van de dag, bij gemiddelden in het eerste uur met het daggemiddelde.
+  van de dag, bij gemiddelden in het eerste uur met het daggemiddelde;
+- ``max``: zo veel en zo nauwkeurig mogelijk: per 5 minuten zo ver als SolarEdge dat levert (uurrijen, plus
+  5-minutenrijen binnen ``keep_days``), daarvóór per dag tot de eerste productiedag.
+
+De limieten van SolarEdge (periode per request, hoe ver terug) staan in :mod:`.history_limits`; nieuwe limieten
+worden uit foutmeldingen geleerd en de blokken passen zich daaraan aan.
 
 Bij sommen sluit de reeks aan op de bestaande rij vóór de periode, worden bestaande rijen binnen de periode met
 dezelfde reeks herschreven en schuiven alle rijen erna mee. Dezelfde import nog een keer doen verandert dus niets.
@@ -25,6 +30,7 @@ import bisect
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
+import itertools
 import logging
 from typing import Any, Literal
 
@@ -43,13 +49,19 @@ from homeassistant.util import dt as dt_util
 
 from .api import ApiError, SolarEdgeMonitoringClient, measurement_datasource
 from .api.models import GenerateChartResponse
-from .const import DOMAIN, HISTORY_INTERVAL_DAY, HISTORY_INTERVAL_FIVE_MINUTES, HISTORY_INTERVAL_HOUR
+from .const import (
+    DOMAIN,
+    HISTORY_INTERVAL_DAY,
+    HISTORY_INTERVAL_FIVE_MINUTES,
+    HISTORY_INTERVAL_HOUR,
+    HISTORY_INTERVAL_MAX,
+)
 from .discovery import OPTIMIZER_TYPE, SiteModel
+from .history_limits import HistoryLimits, granularity_class
 from .metrics import UNIT_MAP
 
 _LOGGER = logging.getLogger(__name__)
 
-CHUNK = timedelta(days=7)  # generate-chart weigert meer dan ~14 dagen per request (EXPORT_LIMIT_REACHED)
 MIN_CHUNK = timedelta(days=1)
 FIVE_MINUTES = timedelta(minutes=5)
 HOUR = timedelta(hours=1)
@@ -57,10 +69,8 @@ DAY = timedelta(days=1)
 LOOKBACK = timedelta(days=1)  # 's nachts meet de omvormer niet: de stand van het begin komt van de dag ervoor
 NEAR = timedelta(days=7)  # ankerpunten dichter bij de periode worden in dezelfde requests meegenomen
 PREV_SEARCH = (timedelta(days=2), timedelta(days=35), timedelta(days=400), None)
-DAY_CHUNK = timedelta(days=366)  # met dagresolutie gaan zelfs jaren in één request
-FINE_LIMIT = timedelta(days=729)  # SolarEdge levert 5-minuten- en uurdata maar 730 dagen terug
 
-type Interval = Literal["five_minutes", "hour", "day"]
+type Interval = Literal["max", "five_minutes", "hour", "day"]
 type Kind = Literal["gauge", "cumulative", "delta"]
 type Series = list[tuple[datetime, float]]
 
@@ -155,6 +165,8 @@ class MetricResult:
     hourly_rows: int
     short_term_rows: int
     sum_adjustment: float | None
+    first: datetime | None = None  # begin van de oudste geschreven rij
+    notes: list[dict[str, Any]] = field(default_factory=list)  # limieten en meldingen van SolarEdge
 
     def as_dict(self) -> dict[str, Any]:
         """Voor de response van de actie."""
@@ -162,9 +174,12 @@ class MetricResult:
             "entity_id": self.entity_id,
             "hourly_rows": self.hourly_rows,
             "short_term_rows": self.short_term_rows,
+            "first": self.first.isoformat() if self.first else None,
         }
         if self.sum_adjustment is not None:
             result["sum_adjustment"] = round(self.sum_adjustment, 3)
+        if self.notes:
+            result["notes"] = self.notes
         return result
 
 
@@ -320,11 +335,26 @@ def value_at(series: Series, moment: datetime) -> float | None:
     return series[index - 1][1] if index else None
 
 
-def interval_starts(start: datetime, end: datetime, interval: Interval) -> tuple[list[datetime], list[datetime]]:
+def interval_starts(
+    start: datetime,
+    end: datetime,
+    interval: Interval,
+    fine_from: datetime | None = None,
+    short_from: datetime | None = None,
+) -> tuple[list[datetime], list[datetime]]:
     """Begintijden van de eigen sommenrijen in ``[start, end)``: (uurrijen, 5-minutenrijen).
 
-    Bij ``day`` is dat het laatste uur van elke lokale dag, zodat de dagstand op het eind van de dag valt.
+    Bij ``day`` is dat het laatste uur van elke lokale dag, zodat de dagstand op het eind van de dag valt. Bij ``max``
+    dagrijen vóór ``fine_from``, uurrijen daarna en 5-minutenrijen vanaf ``short_from``.
     """
+    if interval == HISTORY_INTERVAL_MAX:
+        boundary = min(max(fine_from or start, start), end)
+        day_rows, _ = interval_starts(start, boundary, HISTORY_INTERVAL_DAY)
+        hour_rows, _ = interval_starts(boundary, end, HISTORY_INTERVAL_HOUR)
+        short_start = max(boundary, short_from or boundary)
+        _, short_rows = interval_starts(short_start, end, HISTORY_INTERVAL_FIVE_MINUTES) if short_start < end else ([], [])
+        return day_rows + hour_rows, short_rows
+
     hourly: list[datetime] = []
     short_term: list[datetime] = []
     if interval == HISTORY_INTERVAL_DAY:
@@ -368,6 +398,8 @@ def build_import(
     interval: Interval,
     existing: Existing,
     state_of: Callable[[datetime, float], float] | None = None,
+    fine_from: datetime | None = None,
+    short_from: datetime | None = None,
 ) -> ImportPlan:
     """Sommenrijen voor ``[start, end)`` en de verschuiving van de rijen erna.
 
@@ -418,7 +450,7 @@ def build_import(
         state = state_of(row_end, value) if state_of is not None else value + offset
         return StatisticData(start=row_start, state=round(state, 6), sum=round(anchor_sum + value - anchor_l, 6))
 
-    own_hourly, own_short = interval_starts(start, end, interval)
+    own_hourly, own_short = interval_starts(start, end, interval, fine_from, short_from)
     hourly_starts = sorted(set(own_hourly) | {t for t in existing.hourly if start <= t < end})
     short_limit = nxt.start if nxt else end
     short_starts = sorted(set(own_short) | {t for t in existing.short_term if start <= t < short_limit})
@@ -479,7 +511,7 @@ def build_gauge_import(
     return ImportPlan(hourly, short_term)
 
 
-def chunks(start: datetime, end: datetime, size: timedelta = CHUNK) -> list[tuple[datetime, datetime]]:
+def chunks(start: datetime, end: datetime, size: timedelta = timedelta(days=31)) -> list[tuple[datetime, datetime]]:
     """``[start, end)`` in blokken van hoogstens ``size``."""
     result = []
     while start < end:
@@ -609,6 +641,19 @@ def delta_series(
 # --- Ophalen en importeren ----------------------------------------------------------------------
 
 
+def _note(notes: list[dict[str, Any]], note: dict[str, Any]) -> None:
+    if note not in notes:
+        notes.append(note)
+
+
+def _coarser_than_requested(chart: GenerateChartResponse) -> bool:
+    """Gaf SolarEdge dagwaarden terug terwijl om een fijnere resolutie gevraagd werd (stille terugval)?"""
+    stamps = sorted({p.timestamp for i in range(len(chart.data)) for p in chart.points(i)})
+    if len(stamps) < 3:
+        return False
+    return min(b - a for a, b in itertools.pairwise(stamps)) >= DAY
+
+
 async def fetch_charts(
     client: SolarEdgeMonitoringClient,
     site_id: int,
@@ -617,25 +662,71 @@ async def fetch_charts(
     *,
     uri: str | None = None,
     granularity: str = "FIVE_MINUTES",
+    limits: HistoryLimits | None = None,
+    notes: list[dict[str, Any]] | None = None,
 ) -> list[GenerateChartResponse]:
-    """generate-chart over ``ranges`` in blokken (7 dagen, of een jaar per dag), kleiner bij EXPORT_LIMIT_REACHED."""
-    category, name = (uri or metric.metric).split(".", 1)
+    """generate-chart over ``ranges`` in zo groot mogelijke blokken binnen de limieten.
+
+    - Blokken zo groot als de bekende periode per request; ouder dan de leeftijdsgrens wordt overgeslagen.
+    - Een foutmelding met een limiet wordt geleerd, waarna het blok opnieuw wordt opgedeeld.
+    - Komt er stilletjes dagresolutie terug, dan wordt het blok kleiner.
+    """
+    limits = limits or HistoryLimits(None, None)
+    notes = notes if notes is not None else []
+    full = uri or metric.metric
+    category, name = full.split(".", 1)
+    device_types = [device_type for device_type, _ in metric.sources]
     datasources = [
         measurement_datasource(site_id, device_type, identifiers, [(category, name)], granularity)
         for device_type, identifiers in metric.sources
     ]
-    size = DAY_CHUNK if granularity == "DAY" else CHUNK
+    now = dt_util.utcnow()
+
+    def plan(start: datetime, end: datetime) -> list[tuple[datetime, datetime]]:
+        found = [limits.get(device_type, full, granularity) for device_type in device_types]
+        ages = [f.max_age_days for f in found if f.max_age_days is not None]
+        if ages:
+            oldest = now - timedelta(days=min(ages)) + DAY  # een dag marge: de grens is inclusief "vandaag"
+            if start < oldest:
+                _note(notes, {"code": "age_limit", "metric": full, "granularity": granularity, "days": int(min(ages))})
+                start = oldest
+        if start >= end:
+            return []
+        sizes = [f.max_range_days for f in found if f.max_range_days is not None]
+        return chunks(start, end, timedelta(days=min(sizes)) if sizes else timedelta(days=31))
+
     charts: list[GenerateChartResponse] = []
-    pending = [c for start, end in ranges for c in chunks(start, end, size)]
+    pending = [c for start, end in ranges for c in plan(start, end)]
     while pending:
         chunk_start, chunk_end = pending.pop(0)
+        size = chunk_end - chunk_start
         try:
-            charts.append(await client.analysis.generate_chart(site_id, chunk_start, chunk_end, datasources))
+            chart = await client.analysis.generate_chart(site_id, chunk_start, chunk_end, datasources)
         except ApiError as err:
-            size = chunk_end - chunk_start
-            if err.code != "EXPORT_LIMIT_REACHED" or size <= MIN_CHUNK or "730 days" in (err.detail or str(err)):
-                raise
-            pending[:0] = chunks(chunk_start, chunk_end, max(size / 2, MIN_CHUNK))
+            message = err.detail or str(err)
+            if err.code in ("EXPORT_LIMIT_REACHED", "DATASET_TOO_LARGE"):
+                learned = any([limits.learn(device_type, full, granularity, message) for device_type in device_types])
+                replan = plan(chunk_start, chunk_end)
+                if learned and replan != [(chunk_start, chunk_end)]:
+                    _note(notes, {"code": err.code, "metric": full, "granularity": granularity, "message": message})
+                    pending[:0] = replan
+                    continue
+                if "export tool" in message or "only available" in message:
+                    # Ouder dan wat de grafiek levert: overslaan en melden
+                    _note(notes, {"code": err.code, "metric": full, "granularity": granularity, "message": message})
+                    continue
+                if size > MIN_CHUNK:
+                    pending[:0] = chunks(chunk_start, chunk_end, max(size / 2, MIN_CHUNK))
+                    continue
+            raise
+        if granularity_class(granularity) == "fine" and size > DAY and _coarser_than_requested(chart):
+            days = min(31.0, max(1.0, size.days // 2))  # grens onbekend: halveren
+            for device_type in device_types:
+                limits.learn_range(device_type, full, granularity, days, f"dagwaarden bij {size.days} dagen per request")
+            _note(notes, {"code": "downsampled", "metric": full, "granularity": granularity, "days": int(days)})
+            pending[:0] = plan(chunk_start, chunk_end)
+            continue
+        charts.append(chart)
     _LOGGER.debug("%s: %d blokken per %s opgehaald (%s)", metric.entity_id, len(charts), granularity, ranges)
     return charts
 
@@ -673,10 +764,7 @@ def load_existing(hass: HomeAssistant, statistic_id: str, start: datetime, end: 
 
 def local_period(start_date: date, end_date: date) -> tuple[datetime, datetime]:
     """Van het begin van ``start_date`` tot het eind van ``end_date`` (lokale tijd), in UTC."""
-    return (
-        dt_util.as_utc(dt_util.start_of_local_day(start_date)),
-        dt_util.as_utc(dt_util.start_of_local_day(end_date + DAY)),
-    )
+    return local_midnight(start_date), local_midnight(end_date + DAY)
 
 
 async def _metadata(hass: HomeAssistant, metric: ImportableMetric) -> tuple[StatisticMetaData, Callable[[float], float]]:
@@ -715,6 +803,30 @@ async def _metadata(hass: HomeAssistant, metric: ImportableMetric) -> tuple[Stat
     raise HistoryImportError("unit_mismatch", entity_id=metric.entity_id, unit=str(unit), api_unit=str(metric.api_unit))
 
 
+@dataclass(slots=True)
+class Reach:
+    """Hoe ver terug een sensor per resolutie gaat (``None`` = onbeperkt, of geen bron bij ``day_uri``)."""
+
+    fine_from: datetime | None  # eerste hele dag die per 5 minuten kan
+    day_from: datetime | None  # eerste moment dat per dag kan
+    day_uri: str | None  # metric voor dagresolutie (momentwaarde zelf, of de delta bij energie)
+
+
+def reach(metric: ImportableMetric, limits: HistoryLimits, now: datetime) -> Reach:
+    """De leeftijdsgrenzen van een sensor, uit de (bekende of geleerde) limieten."""
+
+    def oldest(uri: str, granularity: str) -> datetime | None:
+        ages = [limits.get(t, uri, granularity).max_age_days for t, _ in metric.sources]
+        known = [a for a in ages if a is not None]
+        return now - timedelta(days=min(known)) + DAY if known else None
+
+    fine = oldest(metric.metric, "FIVE_MINUTES")
+    fine_from = local_midnight(dt_util.as_local(fine).date() + DAY) if fine else None
+    day_uri = metric.metric if not metric.has_sum else metric.delta_metric
+    day_from = oldest(day_uri, "DAY") if day_uri else None
+    return Reach(fine_from, day_from, day_uri)
+
+
 async def async_import_metric(
     hass: HomeAssistant,
     client: SolarEdgeMonitoringClient,
@@ -723,60 +835,97 @@ async def async_import_metric(
     start: datetime,
     end: datetime,
     interval: Interval,
+    limits: HistoryLimits | None = None,
 ) -> MetricResult:
     """Importeer één sensor over ``[start, end)`` (UTC, hele uren)."""
+    limits = limits or HistoryLimits(None, None)
     metadata, convert = await _metadata(hass, metric)
     now = dt_util.utcnow()
     recorder = get_instance(hass)
+    notes: list[dict[str, Any]] = []
+    span = reach(metric, limits, now)
+    # 5-minutenrijen alleen binnen keep_days van de recorder (ouder ruimt hij op), op een heel uur
+    short_from = (now - timedelta(days=getattr(recorder, "keep_days", 10))).replace(minute=0, second=0, microsecond=0) + HOUR
+    fine_uri = metric.metric.split(".", 1)[1]
 
-    day_resolution = interval == HISTORY_INTERVAL_DAY
-    if not day_resolution and start < now - FINE_LIMIT:
-        raise HistoryImportError("too_old_for_interval", days=str(FINE_LIMIT.days + 1))
+    async def fetch(ranges: list[tuple[datetime, datetime]], uri: str, granularity: str) -> list[GenerateChartResponse]:
+        return await fetch_charts(
+            client, model.site_id, metric, ranges, uri=uri, granularity=granularity, limits=limits, notes=notes
+        )
+
+    if interval in (HISTORY_INTERVAL_FIVE_MINUTES, HISTORY_INTERVAL_HOUR) and span.fine_from and start < span.fine_from - DAY:
+        days = int((now - span.fine_from).days) + 1
+        raise HistoryImportError("too_old_for_interval", days=str(days))
+    if interval in (HISTORY_INTERVAL_DAY, HISTORY_INTERVAL_MAX):
+        # Zo ver terug als dag (of, zonder dagbron, 5 minuten) gaat
+        earliest = span.day_from if span.day_uri else (span.fine_from or start)
+        if earliest and start < earliest:
+            _note(
+                notes, {"code": "age_limit", "metric": metric.metric, "granularity": "DAY", "from": earliest.date().isoformat()}
+            )
+            start = local_midnight(dt_util.as_local(earliest).date() + DAY)
+    boundary = max(span.fine_from or start, start) if interval == HISTORY_INTERVAL_MAX else None
 
     if not metric.has_sum:
-        granularity = "DAY" if day_resolution else "FIVE_MINUTES"
-        charts = await fetch_charts(client, model.site_id, metric, [(start, end)], granularity=granularity) if start < end else []
-        series = [(t, convert(v)) for t, v in metric_series(charts, metric.metric.split(".", 1)[1])]
-        plan = build_gauge_import(series, start, end, interval, mean_only=day_resolution)
+        if interval == HISTORY_INTERVAL_MAX:
+            boundary = min(boundary or start, end)
+            day_charts = await fetch([(start, boundary)], metric.metric, "DAY") if start < boundary else []
+            fine_charts = await fetch([(boundary, end)], metric.metric, "FIVE_MINUTES") if boundary < end else []
+            day_series = [(t, convert(v)) for t, v in metric_series(day_charts, fine_uri)]
+            fine_series = [(t, convert(v)) for t, v in metric_series(fine_charts, fine_uri)]
+            plan = build_gauge_import(day_series, start, boundary, HISTORY_INTERVAL_DAY, mean_only=True)
+            hourly = build_gauge_import(fine_series, boundary, end, HISTORY_INTERVAL_HOUR)
+            short_start = max(boundary, short_from)
+            short = (
+                build_gauge_import(fine_series, short_start, end, HISTORY_INTERVAL_FIVE_MINUTES) if short_start < end else None
+            )
+            plan = ImportPlan(plan.hourly + hourly.hourly, short.short_term if short else [])
+        else:
+            day_resolution = interval == HISTORY_INTERVAL_DAY
+            granularity = "DAY" if day_resolution else "FIVE_MINUTES"
+            charts = await fetch([(start, end)], metric.metric, granularity) if start < end else []
+            series = [(t, convert(v)) for t, v in metric_series(charts, fine_uri)]
+            plan = build_gauge_import(series, start, end, interval, mean_only=day_resolution)
         adjustment: float | None = None
-    elif day_resolution and metric.delta_metric is not None:
-        existing, last_start = await recorder.async_add_executor_job(load_existing, hass, metric.entity_id, start, end)
-        if last_start is None:
-            raise HistoryImportError("no_statistics_yet", entity_id=metric.entity_id)
-        end = min(end, last_start)
-        if start >= end:
-            return MetricResult(metric.entity_id, metric.name, 0, 0, 0.0)
-        ((fetch_start, fetch_end),) = fetch_ranges(start, end, existing, now, contiguous=True)
-        # Per 5 minuten alleen waar het moet: dagen met bestaande uurrijen en dagen met een ankerpunt midden op de dag
-        fine_moments = [*existing.hourly]
-        for row in (existing.prev, existing.next):
-            if row is not None and row.start + HOUR != local_midnight(dt_util.as_local(row.start + HOUR).date()):
-                fine_moments.append(row.start)
-        fine_days = {dt_util.as_local(m).date() for m in fine_moments if m >= now - FINE_LIMIT}
-        coarse_ranges, fine_ranges = day_segments(fetch_start, fetch_end, fine_days)
-        uri = metric.delta_metric
-        coarse = await fetch_charts(client, model.site_id, metric, coarse_ranges, uri=uri, granularity="DAY")
-        # 5-minutendagen van een teller: de standen zelf (de delta's per 5 minuten lopen iets achter op de teller)
-        fine_uri = metric.metric if metric.kind == "cumulative" else uri
-        fine = await fetch_charts(client, model.site_id, metric, fine_ranges, uri=fine_uri) if fine_ranges else []
-        fine_name = fine_uri.split(".", 1)[1] if metric.kind == "cumulative" else None
-        series = [(t, convert(v)) for t, v in delta_series(coarse, fine, uri.split(".", 1)[1], fine_uri=fine_name)]
-        state_of = daily_total(series) if metric.kind == "delta" and series else None
-        plan = build_import(series, start, end, interval, existing, state_of)
-        adjustment = plan.sum_adjustment
     else:
         existing, last_start = await recorder.async_add_executor_job(load_existing, hass, metric.entity_id, start, end)
         if last_start is None:
             raise HistoryImportError("no_statistics_yet", entity_id=metric.entity_id)
         end = min(end, last_start)  # de recorder telt vanaf zijn laatste uurrij zelf verder
         if start >= end:
-            return MetricResult(metric.entity_id, metric.name, 0, 0, 0.0)
+            return MetricResult(metric.entity_id, metric.name, 0, 0, 0.0, notes=notes)
         delta = metric.kind == "delta"
-        ranges = fetch_ranges(start, end, existing, now, contiguous=delta)
-        charts = await fetch_charts(client, model.site_id, metric, ranges)
-        raw = metric_series(charts, metric.metric.split(".", 1)[1], delta=delta)
+        if interval in (HISTORY_INTERVAL_DAY, HISTORY_INTERVAL_MAX) and metric.delta_metric is not None:
+            ((fetch_start, fetch_end),) = fetch_ranges(start, end, existing, now, contiguous=True)
+            # Per 5 minuten: bij max alles wat kan, en altijd dagen met bestaande uurrijen of een ankerpunt midden op de dag
+            fine_moments = [*existing.hourly]
+            for row in (existing.prev, existing.next):
+                if row is not None and row.start + HOUR != local_midnight(dt_util.as_local(row.start + HOUR).date()):
+                    fine_moments.append(row.start)
+            fine_days = {dt_util.as_local(m).date() for m in fine_moments if not span.fine_from or m >= span.fine_from}
+            if interval == HISTORY_INTERVAL_MAX:
+                day = dt_util.as_local(max(boundary or fetch_start, fetch_start)).date()
+                while local_midnight(day) < fetch_end:
+                    fine_days.add(day)
+                    day += DAY
+            coarse_ranges, fine_ranges = day_segments(fetch_start, fetch_end, fine_days)
+            uri = metric.delta_metric
+            coarse = await fetch(coarse_ranges, uri, "DAY") if coarse_ranges else []
+            # 5-minutendagen van een teller: de standen zelf (de delta's per 5 minuten lopen iets achter op de teller)
+            fine_metric = metric.metric if metric.kind == "cumulative" else uri
+            fine = await fetch(fine_ranges, fine_metric, "FIVE_MINUTES") if fine_ranges else []
+            fine_name = fine_metric.split(".", 1)[1] if metric.kind == "cumulative" else None
+            raw = delta_series(coarse, fine, uri.split(".", 1)[1], fine_uri=fine_name)
+        else:
+            if interval == HISTORY_INTERVAL_MAX and span.fine_from and start < span.fine_from:
+                start = span.fine_from  # geen dagbron: alleen wat per 5 minuten kan
+                _note(notes, {"code": "no_day_source", "metric": metric.metric})
+            ranges = fetch_ranges(start, end, existing, now, contiguous=delta)
+            charts = await fetch(ranges, metric.metric, "FIVE_MINUTES")
+            raw = metric_series(charts, fine_uri, delta=delta)
         series = [(t, convert(v)) for t, v in raw]
-        plan = build_import(series, start, end, interval, existing, daily_total(series) if delta and series else None)
+        state_of = daily_total(series) if delta and series else None
+        plan = build_import(series, start, end, interval, existing, state_of, boundary, short_from)
         adjustment = plan.sum_adjustment
 
     if plan.hourly:
@@ -787,8 +936,9 @@ async def async_import_metric(
         recorder.async_adjust_statistics(
             metric.entity_id, plan.adjust_from, plan.sum_adjustment, metadata["unit_of_measurement"] or ""
         )
+    first = min((r["start"] for r in plan.hourly), default=None)
     _LOGGER.info(
-        "Historie %s – %s (%s) geïmporteerd voor %s: %d uurrijen, %d 5-minutenrijen, verschuiving %s",
+        "Historie %s – %s (%s) geïmporteerd voor %s: %d uurrijen, %d 5-minutenrijen, verschuiving %s, vanaf %s, meldingen %s",
         start,
         end,
         interval,
@@ -796,8 +946,10 @@ async def async_import_metric(
         len(plan.hourly),
         len(plan.short_term),
         adjustment,
+        first,
+        notes,
     )
-    return MetricResult(metric.entity_id, metric.name, len(plan.hourly), len(plan.short_term), adjustment)
+    return MetricResult(metric.entity_id, metric.name, len(plan.hourly), len(plan.short_term), adjustment, first, notes)
 
 
 async def async_import_history(
@@ -805,19 +957,26 @@ async def async_import_history(
     client: SolarEdgeMonitoringClient,
     model: SiteModel,
     metrics: list[ImportableMetric],
-    start_date: date,
+    start_date: date | None,
     end_date: date,
     interval: Interval = HISTORY_INTERVAL_HOUR,
+    limits: HistoryLimits | None = None,
 ) -> ImportResult:
-    """Importeer ``metrics`` van ``start_date`` t/m ``end_date`` (lokale dagen) met ``interval``."""
+    """Importeer ``metrics`` van ``start_date`` t/m ``end_date`` (lokale dagen) met ``interval``.
+
+    Zonder ``start_date`` begint de import bij de eerste productiedag van de installatie.
+    """
     if "recorder" not in hass.config.components:
         raise HistoryImportError("recorder_not_running")
-    if start_date > end_date:
-        raise HistoryImportError("invalid_period")
     if not metrics:
         raise HistoryImportError("no_importable_metrics")
+    if start_date is None:
+        availability = await client.dashboard.get_data_availability(model.site_id)
+        start_date = availability.production_data_available_from or (end_date - timedelta(days=365))
+    if start_date > end_date:
+        raise HistoryImportError("invalid_period")
 
     start, end = local_period(start_date, end_date)
     end = min(end, dt_util.utcnow().replace(minute=0, second=0, microsecond=0))
-    results = [await async_import_metric(hass, client, model, metric, start, end, interval) for metric in metrics]
+    results = [await async_import_metric(hass, client, model, metric, start, end, interval, limits) for metric in metrics]
     return ImportResult(interval, start, max(start, end), results)

@@ -291,6 +291,7 @@ class SolarEdgeRuntimeData:
     panels: PanelsCoordinator | None
     info: InfoCoordinator
     history_lock: asyncio.Lock = field(default_factory=asyncio.Lock)  # één historie-import tegelijk
+    history_limits: Any = None  # HistoryLimits, bij de eerste import geladen
 
     @classmethod
     def create(

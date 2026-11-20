@@ -23,6 +23,7 @@ from pytest_homeassistant_custom_component.components.recorder.common import asy
 from custom_components.solaredge_monitoring.api import ApiError
 from custom_components.solaredge_monitoring.api.models import GenerateChartResponse, parse
 from custom_components.solaredge_monitoring.const import DOMAIN
+from custom_components.solaredge_monitoring.history_limits import HistoryLimits
 from custom_components.solaredge_monitoring.statistics_import import (
     Existing,
     ImportableMetric,
@@ -104,7 +105,7 @@ def test_metric_series_delta_is_running_total() -> None:
 
 
 def test_chunks() -> None:
-    assert chunks(T, T + timedelta(days=15)) == [
+    assert chunks(T, T + timedelta(days=15), timedelta(days=7)) == [
         (T, T + timedelta(days=7)),
         (T + timedelta(days=7), T + timedelta(days=14)),
         (T + timedelta(days=14), T + timedelta(days=15)),
@@ -258,7 +259,27 @@ def _days(start: datetime, end: datetime) -> list[date]:
     return result
 
 
-def history_session() -> FakeSession:
+FAKE_FINE_AGE = {"days": 730}  # leeftijdsgrens van 5-minutendata van omvormers in de nep-API
+
+
+def fake_limit(device_type: str, granularity: str, start: datetime, end: datetime) -> dict[str, str] | None:
+    """De limieten die SolarEdge hanteert (zie docs/historie-limieten.md), met de echte foutteksten."""
+    now = dt_util.utcnow()
+    days = FAKE_FINE_AGE["days"]
+    if device_type == "OPTIMIZER":
+        if start < now - timedelta(days=90):
+            message = "Optimizer x data older than 90 days is not available in the chart view. Use the export tool."
+            return {"errorCode": "DATASET_TOO_LARGE", "message": message}
+        if granularity != "DAY" and end - start > timedelta(days=14):
+            message = "Optimizer x data at hourly or finer resolution is limited to 14 days. Please select a shorter date range."
+            return {"errorCode": "EXPORT_LIMIT_REACHED", "message": message}
+    elif granularity != "DAY" and start < now - timedelta(days=days):
+        message = f"One phase inverter x data at hourly or finer resolution is only available for the last {days} days."
+        return {"errorCode": "EXPORT_LIMIT_REACHED", "message": message}
+    return None
+
+
+def history_session(available_from: date | None = None) -> FakeSession:
     """Nep-API waarin generate-chart voor elk gevraagd apparaat en elke metric 5-minutenwaarden geeft."""
     session = build_session(site_responses())
     requests: list[tuple[datetime, datetime, str]] = []
@@ -267,7 +288,15 @@ def history_session() -> FakeSession:
         body = call.json
         start = dt_util.parse_datetime(body["reportPeriod"]["from"])
         end = dt_util.parse_datetime(body["reportPeriod"]["to"])
-        requests.append((start, end, body["datasources"][0]["alignmentGranularity"]))
+        granularity = body["datasources"][0]["alignmentGranularity"]
+        requests.append((start, end, granularity))
+        device_type = body["datasources"][0]["datasourcePopulation"]["deviceType"]
+        if error := fake_limit(device_type, granularity, start, end):
+            return FakeResponse(400, json.dumps(error))
+        if granularity != "DAY" and end - start > timedelta(days=31):
+            granularity = "DAY"  # zoals SolarEdge: stilletjes dagwaarden
+            for datasource in body["datasources"]:
+                datasource["alignmentGranularity"] = "DAY"
         moments = []
         moment = start
         while moment < end:
@@ -296,6 +325,9 @@ def history_session() -> FakeSession:
 
     session.add_callback("POST", r"generate-chart$", respond)
     session._routes.insert(0, session._routes.pop())  # vóór de standaard-fixture
+    first_day = available_from or dt_util.now().date() - timedelta(days=1000)
+    session.add("GET", r"data-availability/sites", json_body={"productionDataAvailableFrom": first_day.isoformat()})
+    session._routes.insert(0, session._routes.pop())
     session.history_requests = requests  # type: ignore[attr-defined]
     return session
 
@@ -407,7 +439,7 @@ async def test_import_site_energy_hour(hass: HomeAssistant, config_entry: MockCo
     assert result["hourly_rows"] == int((end - start) / H)
     assert result["short_term_rows"] == 0
     imports = [r for r in session.history_requests if r[1] - r[0] > 3 * H]  # zonder de telemetrie-requests
-    assert len(imports) == 2  # 11 dagen in blokken van 7
+    assert len(imports) == 1  # 11 dagen passen in één blok van 31
 
     rows = await stats(hass, statistic_id, start)
     assert len(rows) == result["hourly_rows"] + 1
@@ -686,3 +718,152 @@ async def test_day_interval_uses_day_resolution(hass: HomeAssistant, config_entr
     assert all(b - a == pytest.approx(28800) for a, b in itertools.pairwise(sums))
     # De reeks sluit aan op de bestaande rij: alles daarna schuift mee zonder terugval
     assert all(b["sum"] >= a["sum"] for a, b in itertools.pairwise(rows))
+
+
+# --- Limieten en interval maximaal --------------------------------------------------------------
+
+
+def test_history_limits_known_and_learned() -> None:
+    limits = HistoryLimits(None, None)
+    inverter = "ONE_PHASE_INVERTER"
+    assert limits.get(inverter, "measurements.ac_voltage", "FIVE_MINUTES").max_age_days == 730
+    assert limits.get(inverter, "measurements.ac_voltage", "DAY").max_range_days == 32
+    assert limits.get(inverter, LIFETIME, "DAY").max_range_days == 366
+    assert limits.get(inverter, "measurements.power_factor", "DAY").max_range_days == 7
+    assert limits.get("OPTIMIZER", "measurements.output_power", "HOUR").max_range_days == 14
+
+    message = "Three phase inverter x data at hourly or finer resolution is limited to 10 days. Please select …"
+    assert limits.learn("THREE_PHASE_INVERTER", "measurements.x", "FIVE_MINUTES", message)
+    assert limits.get("THREE_PHASE_INVERTER", "measurements.x", "HOUR").max_range_days == 10
+    assert limits.get("THREE_PHASE_INVERTER", "measurements.x", "DAY").max_range_days == 366  # alleen fijn
+    assert limits.learn("X", "m.y", "DAY", "Y data is only available for the last 100 days. Please …")
+    assert limits.get("X", "m.y", "FIVE_MINUTES").max_age_days == 100
+    assert limits.get("X", "m.y", "DAY").max_age_days == 100
+    assert not limits.learn("X", "m.y", "DAY", "Y data is only available for the last 100 days.")  # niets nieuws
+
+
+def _metric(device_type: str = "THREE_PHASE_INVERTER", metric: str = "measurements.x") -> ImportableMetric:
+    return ImportableMetric("u", "sensor.x", "X", metric, "gauge", "W", None, ((device_type, ("A",)),))
+
+
+async def test_fetch_charts_learns_range_limit() -> None:
+    client = MagicMock()
+    ranges: list[tuple[datetime, datetime]] = []
+
+    async def generate_chart(_site: int, start: datetime, end: datetime, _ds: list[Any]) -> GenerateChartResponse:
+        if end - start > timedelta(days=10):
+            raise ApiError("x", 400, "EXPORT_LIMIT_REACHED", "X data at hourly or finer resolution is limited to 10 days.")
+        ranges.append((start, end))
+        return chart({"A": [(start, 1.0)]})
+
+    client.analysis.generate_chart = AsyncMock(side_effect=generate_chart)
+    limits = HistoryLimits(None, None)
+    notes: list[dict[str, Any]] = []
+    start = dt_util.utcnow() - timedelta(days=25)
+    await fetch_charts(client, SITE_ID, _metric(), [(start, start + timedelta(days=25))], limits=limits, notes=notes)
+    assert [(e - s).days for s, e in ranges] == [10, 10, 5]
+    assert notes[0]["code"] == "EXPORT_LIMIT_REACHED"
+    # De volgende keer meteen goed
+    client.analysis.generate_chart.reset_mock()
+    await fetch_charts(client, SITE_ID, _metric(), [(start, start + timedelta(days=20))], limits=limits)
+    assert client.analysis.generate_chart.call_count == 2
+
+
+async def test_fetch_charts_detects_silent_daily_values() -> None:
+    client = MagicMock()
+    sizes: list[int] = []
+
+    async def generate_chart(_site: int, start: datetime, end: datetime, _ds: list[Any]) -> GenerateChartResponse:
+        sizes.append((end - start).days)
+        step = timedelta(days=1) if end - start > timedelta(days=20) else M5
+        return chart({"A": [(start + i * step, 1.0) for i in range(5)]})
+
+    client.analysis.generate_chart = AsyncMock(side_effect=generate_chart)
+    notes: list[dict[str, Any]] = []
+    start = dt_util.utcnow() - timedelta(days=40)
+    charts = await fetch_charts(client, SITE_ID, _metric(), [(start, start + timedelta(days=40))], notes=notes)
+    assert sizes[0] == 31  # standaard 31 dagen per request
+    assert all(size <= 20 for size in sizes[2:])
+    assert any(n["code"] == "downsampled" for n in notes)
+    assert len(charts) == len(sizes) - 1  # het blok met dagwaarden telt niet mee
+
+
+async def test_fetch_charts_skips_data_older_than_the_limit() -> None:
+    client = MagicMock()
+    client.analysis.generate_chart = AsyncMock(return_value=chart({"A": [(T, 1.0)]}))
+    notes: list[dict[str, Any]] = []
+    now = dt_util.utcnow()
+    await fetch_charts(
+        client, SITE_ID, _metric("OPTIMIZER", "measurements.output_power"), [(now - timedelta(days=200), now)], notes=notes
+    )
+    first_start = client.analysis.generate_chart.call_args_list[0].args[1]
+    assert first_start >= now - timedelta(days=90)
+    assert notes == [{"code": "age_limit", "metric": "measurements.output_power", "granularity": "FIVE_MINUTES", "days": 90}]
+
+
+def test_interval_starts_max(hass: HomeAssistant) -> None:
+    day = date(2026, 8, 1)
+    start, fine_from, end = local_midnight(day), local_midnight(day + timedelta(days=3)), local_midnight(day + timedelta(days=4))
+    hourly, short_term = interval_starts(start, end, "max", fine_from, end - 2 * H)
+    assert hourly[:3] == [local_midnight(day + timedelta(days=d + 1)) - H for d in range(3)]
+    assert hourly[3:] == [fine_from + h * H for h in range(24)]
+    assert len(short_term) == 24
+
+
+async def test_import_max_site_energy(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+    # Kleinere leeftijdsgrens dan in het echt (730 dagen), zodat de test snel is; de integratie leert hem uit de fout
+    session = history_session(dt_util.now().date() - timedelta(days=60))
+    await setup(hass, config_entry, session)
+    statistic_id = entity_id(hass, f"{SITE_ID}_site_energy_lifetime")
+    t0 = dt_util.utcnow().replace(minute=0, second=0, microsecond=0) - 2 * H
+    await existing_rows(hass, statistic_id, t0, 1)
+
+    with (
+        patch.dict(FAKE_FINE_AGE, {"days": 40}),
+        patch("custom_components.solaredge_monitoring.history_limits.known_limit", side_effect=_short_fine_limit),
+    ):
+        response = await import_statistics(
+            hass, device_id=device_id(hass, config_entry, f"site_{SITE_ID}"), entity_id=[statistic_id], interval="max"
+        )
+    (result,) = response["metrics"]
+    first_day = dt_util.now().date() - timedelta(days=60)
+    assert response["from"] == local_midnight(first_day).isoformat()
+    assert result["first"] == (local_midnight(first_day + timedelta(days=1)) - H).isoformat()  # dagrij van de eerste dag
+
+    imports = [r for r in session.history_requests if r[1] - r[0] > 3 * H]
+    assert {r[2] for r in imports} == {"DAY", "FIVE_MINUTES"}
+    assert not [r for r in imports if r[2] != "DAY" and r[0] < dt_util.utcnow() - timedelta(days=40)]
+
+    rows = await stats(hass, statistic_id, local_midnight(first_day))
+    daily = [r for r in rows if r["start"] < (dt_util.utcnow() - timedelta(days=41)).timestamp()]
+    hourly = [r for r in rows if r["start"] >= (dt_util.utcnow() - timedelta(days=38)).timestamp()]
+    assert len(daily) in (18, 19)  # één rij per dag
+    assert len(hourly) > 37 * 24
+    assert_consistent(rows)
+    short_term = await stats(hass, statistic_id, dt_util.utcnow() - timedelta(days=20), "5minute")
+    assert short_term
+    assert dt_util.utc_from_timestamp(short_term[0]["start"]) >= dt_util.utcnow() - timedelta(days=11)
+    assert all(dt_util.utc_from_timestamp(r["start"]).minute % 5 == 0 for r in short_term)
+    assert all(dt_util.utc_from_timestamp(r["start"]).second == 0 for r in short_term)
+
+
+def _short_fine_limit(device_type: str, metric: str, cls: str) -> Any:
+    from custom_components.solaredge_monitoring.history_limits import Limit  # noqa: PLC0415
+
+    return Limit(max_range_days=31 if cls == "fine" else 366, max_age_days=40 if cls == "fine" else None)
+
+
+async def test_import_max_optimizer_power(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+    session = history_session()
+    await setup(hass, config_entry, session)
+    power = entity_id(hass, f"{SITE_ID}_11112222-AB_power")
+    response = await import_statistics(
+        hass, device_id=device_id(hass, config_entry, "11112222-AB"), entity_id=[power], interval="max"
+    )
+    (result,) = response["metrics"]
+    assert {n["code"] for n in result["notes"]} >= {"age_limit"}
+    assert all(r[1] - r[0] <= timedelta(days=14) for r in session.history_requests if r[2] != "DAY")
+    assert not [r for r in session.history_requests if r[0] < dt_util.utcnow() - timedelta(days=90)]
+    rows = await stats(hass, power, dt_util.utcnow() - timedelta(days=100), types={"mean"})
+    assert dt_util.utc_from_timestamp(rows[0]["start"]) >= dt_util.utcnow() - timedelta(days=90)
+    assert len(rows) > 85 * 24
