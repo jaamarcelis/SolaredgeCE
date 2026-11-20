@@ -3,6 +3,7 @@ name = "solaredge-monitoring-ha"
 version = "0.1.0"
 description = "Home Assistant-integratie voor de interne API van monitoring.solaredge.com"
 requires-python = ">=3.13"
+license = "MIT"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

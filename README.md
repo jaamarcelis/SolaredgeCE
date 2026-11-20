@@ -134,3 +134,7 @@ $env:SOLAREDGE_LIVE_TESTS='1'; $env:SOLAREDGE_USERNAME='jij@example.com'; $env:S
 
 ### Logo
 Het logo en icoon staan in `custom_components/solaredge_monitoring/brand/`: `icon.png` (256×256), `icon@2x.png` (512×512) en `logo.png` (256 px hoog). Home Assistant 2026.10+ toont die zelf voor custom integrations, dus indienen bij home-assistant/brands is niet nodig. Ontbrekende varianten (`logo@2x.png`, `dark_*.png`) vult HA aan met de bestaande bestanden.
+
+## Licentie
+
+MIT, zie [LICENSE](LICENSE).
