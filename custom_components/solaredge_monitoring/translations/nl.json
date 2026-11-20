@@ -1,0 +1,294 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SolarEdge Monitoring",
+        "description": "Log in met het account dat je op monitoring.solaredge.com gebruikt.",
+        "data": {
+          "username": "E-mailadres",
+          "password": "Wachtwoord"
+        }
+      },
+      "mfa": {
+        "title": "Tweestapsverificatie",
+        "description": "Vul de code uit je {mfa_type} in.",
+        "data": {
+          "mfa_code": "Code"
+        }
+      },
+      "site": {
+        "title": "Kies een installatie",
+        "data": {
+          "site_id": "Installatie"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Opnieuw inloggen",
+        "description": "SolarEdge accepteert de sessie van {username} niet meer. Vul je wachtwoord in.",
+        "data": {
+          "password": "Wachtwoord"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Onjuist e-mailadres of wachtwoord.",
+      "invalid_mfa": "Onjuiste of verlopen code.",
+      "cannot_connect": "Kan geen verbinding maken met SolarEdge."
+    },
+    "abort": {
+      "already_configured": "Deze installatie is al ingesteld.",
+      "cannot_connect": "Kan je installaties niet ophalen bij SolarEdge.",
+      "no_sites": "Geen installaties gevonden voor dit account.",
+      "reauth_successful": "Opnieuw ingelogd."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opties SolarEdge Monitoring",
+        "data": {
+          "live_interval": "Interval live energiestroom",
+          "energy_interval": "Interval energie",
+          "telemetry_interval": "Interval omvormertelemetrie",
+          "panels_interval": "Interval paneeldata",
+          "info_interval": "Interval weer en alerts",
+          "include_optimizers": "Per optimizer (paneel) een apparaat aanmaken",
+          "telemetry_metrics": "Op te halen omvormermetrics (leeg = alle)"
+        },
+        "data_description": {
+          "telemetry_metrics": "Automatisch ontdekt via de SolarEdge-API voor jouw omvormertype."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "current_power": {
+        "name": "Actueel vermogen"
+      },
+      "ac_power": {
+        "name": "AC-vermogen"
+      },
+      "last_update": {
+        "name": "Laatste update"
+      },
+      "energy_today": {
+        "name": "Energie vandaag"
+      },
+      "energy_this_month": {
+        "name": "Energie deze maand"
+      },
+      "energy_this_year": {
+        "name": "Energie dit jaar"
+      },
+      "energy_lifetime": {
+        "name": "Energie totaal"
+      },
+      "yield_today": {
+        "name": "Specifiek rendement vandaag"
+      },
+      "yield_this_month": {
+        "name": "Specifiek rendement deze maand"
+      },
+      "yield_this_year": {
+        "name": "Specifiek rendement dit jaar"
+      },
+      "peak_power": {
+        "name": "Piekvermogen"
+      },
+      "open_alerts": {
+        "name": "Open alerts"
+      },
+      "co2_saved": {
+        "name": "CO₂ bespaard"
+      },
+      "trees_planted": {
+        "name": "Equivalent geplante bomen"
+      },
+      "sunrise": {
+        "name": "Zonsopkomst"
+      },
+      "sunset": {
+        "name": "Zonsondergang"
+      },
+      "performance_ratio": {
+        "name": "Performance ratio"
+      },
+      "consumption_power": {
+        "name": "Verbruik"
+      },
+      "grid_import_power": {
+        "name": "Netafname"
+      },
+      "grid_export_power": {
+        "name": "Teruglevering"
+      },
+      "grid_status": {
+        "name": "Netstatus",
+        "state": {
+          "import": "Afname",
+          "export": "Teruglevering",
+          "grid-outage": "Netstoring",
+          "idle": "Inactief"
+        }
+      },
+      "consumption_today": {
+        "name": "Verbruik vandaag"
+      },
+      "import_today": {
+        "name": "Netafname vandaag"
+      },
+      "export_today": {
+        "name": "Teruglevering vandaag"
+      },
+      "self_consumption_today": {
+        "name": "Eigen verbruik vandaag"
+      },
+      "self_consumption_ratio": {
+        "name": "Eigenverbruiksgraad"
+      },
+      "self_sufficiency_ratio": {
+        "name": "Zelfvoorzienendheid"
+      },
+      "inverter_power": {
+        "name": "Vermogen"
+      },
+      "communication": {
+        "name": "Communicatie"
+      },
+      "relative_output": {
+        "name": "Relatieve opbrengst"
+      },
+      "optimizer_power": {
+        "name": "Vermogen"
+      },
+      "panel_voltage": {
+        "name": "Paneelspanning"
+      },
+      "output_voltage": {
+        "name": "Uitgangsspanning"
+      },
+      "optimizer_current": {
+        "name": "Stroom"
+      },
+      "state_of_charge": {
+        "name": "Laadniveau"
+      },
+      "battery_power": {
+        "name": "Batterijvermogen"
+      },
+      "battery_status": {
+        "name": "Batterijstatus",
+        "state": {
+          "charging": "Laden",
+          "discharging": "Ontladen",
+          "idle": "Inactief"
+        }
+      },
+      "charged_from_pv_today": {
+        "name": "Geladen uit zon vandaag"
+      },
+      "charged_from_grid_today": {
+        "name": "Geladen uit net vandaag"
+      },
+      "discharged_to_home_today": {
+        "name": "Ontladen naar huis vandaag"
+      },
+      "discharged_to_grid_today": {
+        "name": "Ontladen naar net vandaag"
+      },
+      "position": {
+        "name": "Positie"
+      },
+      "panel_manufacturer": {
+        "name": "Paneelfabrikant"
+      },
+      "panel_model": {
+        "name": "Paneelmodel"
+      },
+      "panel_stc_power": {
+        "name": "Nominaal paneelvermogen"
+      },
+      "panel_orientation": {
+        "name": "Paneeloriëntatie",
+        "state": {
+          "landscape": "Liggend",
+          "portrait": "Staand"
+        }
+      },
+      "panel_tilt": {
+        "name": "Paneelhelling"
+      },
+      "panel_azimuth": {
+        "name": "Paneelazimut"
+      },
+      "panel_direction": {
+        "name": "Paneelligging"
+      }
+    },
+    "binary_sensor": {
+      "communicating": {
+        "name": "Communiceert"
+      },
+      "power_limited": {
+        "name": "Vermogen beperkt"
+      },
+      "alerts": {
+        "name": "Alerts"
+      }
+    },
+    "button": {
+      "import_energy_history": {
+        "name": "Historie importeren"
+      }
+    }
+  },
+  "exceptions": {
+    "recorder_not_running": {
+      "message": "De recorder draait niet."
+    },
+    "energy_entity_not_found": {
+      "message": "De sensor Energie totaal van deze site is niet gevonden."
+    },
+    "energy_entity_disabled": {
+      "message": "{entity_id} is uitgeschakeld; schakel hem eerst in."
+    },
+    "no_statistics_yet": {
+      "message": "{entity_id} heeft nog geen uurstatistieken. Probeer het opnieuw als de integratie een uur draait."
+    },
+    "no_inverters": {
+      "message": "Deze site heeft geen omvormers om historie van op te halen."
+    },
+    "no_history_data": {
+      "message": "SolarEdge gaf geen lifetime-energie voor deze periode."
+    },
+    "fetch_failed": {
+      "message": "Historie ophalen bij SolarEdge mislukt: {error}"
+    },
+    "import_in_progress": {
+      "message": "Er loopt al een import voor deze site."
+    },
+    "not_a_site_device": {
+      "message": "Kies het site-device van een SolarEdge Monitoring-installatie."
+    },
+    "entry_not_loaded": {
+      "message": "De SolarEdge Monitoring-integratie van dit device is niet geladen."
+    }
+  },
+  "services": {
+    "import_energy_history": {
+      "name": "Energiehistorie importeren",
+      "description": "Haalt de lifetime-energie van de omvormers per 5 minuten op bij SolarEdge en importeert die als uurstatistieken van de sensor Energie totaal van de site. Alleen uren vóór de bestaande statistieken worden toegevoegd; bestaande sommen schuiven mee, zodat er geen sprong ontstaat.",
+      "fields": {
+        "device_id": {
+          "name": "Site",
+          "description": "Het SolarEdge-site-device."
+        },
+        "days": {
+          "name": "Dagen",
+          "description": "Hoeveel dagen terug importeren (1–365)."
+        }
+      }
+    }
+  }
+}

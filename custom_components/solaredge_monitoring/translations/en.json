@@ -1,0 +1,294 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SolarEdge Monitoring",
+        "description": "Log in with the account you use on monitoring.solaredge.com.",
+        "data": {
+          "username": "Email address",
+          "password": "Password"
+        }
+      },
+      "mfa": {
+        "title": "Two-factor authentication",
+        "description": "Enter the code from your {mfa_type}.",
+        "data": {
+          "mfa_code": "Code"
+        }
+      },
+      "site": {
+        "title": "Choose a site",
+        "data": {
+          "site_id": "Site"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Log in again",
+        "description": "SolarEdge no longer accepts the session for {username}. Enter your password.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Incorrect email address or password.",
+      "invalid_mfa": "Incorrect or expired code.",
+      "cannot_connect": "Could not connect to SolarEdge."
+    },
+    "abort": {
+      "already_configured": "This site is already configured.",
+      "cannot_connect": "Could not retrieve your sites from SolarEdge.",
+      "no_sites": "No sites found for this account.",
+      "reauth_successful": "Logged in again successfully."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "SolarEdge Monitoring options",
+        "data": {
+          "live_interval": "Live power flow interval",
+          "energy_interval": "Energy interval",
+          "telemetry_interval": "Inverter telemetry interval",
+          "panels_interval": "Panel data interval",
+          "info_interval": "Weather and alerts interval",
+          "include_optimizers": "Create a device per optimizer (panel)",
+          "telemetry_metrics": "Inverter metrics to retrieve (empty = all)"
+        },
+        "data_description": {
+          "telemetry_metrics": "Discovered automatically from the SolarEdge API for your inverter type."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "current_power": {
+        "name": "Current power"
+      },
+      "ac_power": {
+        "name": "AC power"
+      },
+      "last_update": {
+        "name": "Last update"
+      },
+      "energy_today": {
+        "name": "Energy today"
+      },
+      "energy_this_month": {
+        "name": "Energy this month"
+      },
+      "energy_this_year": {
+        "name": "Energy this year"
+      },
+      "energy_lifetime": {
+        "name": "Lifetime energy"
+      },
+      "yield_today": {
+        "name": "Specific yield today"
+      },
+      "yield_this_month": {
+        "name": "Specific yield this month"
+      },
+      "yield_this_year": {
+        "name": "Specific yield this year"
+      },
+      "peak_power": {
+        "name": "Peak power"
+      },
+      "open_alerts": {
+        "name": "Open alerts"
+      },
+      "co2_saved": {
+        "name": "CO₂ saved"
+      },
+      "trees_planted": {
+        "name": "Equivalent trees planted"
+      },
+      "sunrise": {
+        "name": "Sunrise"
+      },
+      "sunset": {
+        "name": "Sunset"
+      },
+      "performance_ratio": {
+        "name": "Performance ratio"
+      },
+      "consumption_power": {
+        "name": "Consumption"
+      },
+      "grid_import_power": {
+        "name": "Grid import"
+      },
+      "grid_export_power": {
+        "name": "Grid export"
+      },
+      "grid_status": {
+        "name": "Grid status",
+        "state": {
+          "import": "Importing",
+          "export": "Exporting",
+          "grid-outage": "Grid outage",
+          "idle": "Idle"
+        }
+      },
+      "consumption_today": {
+        "name": "Consumption today"
+      },
+      "import_today": {
+        "name": "Grid import today"
+      },
+      "export_today": {
+        "name": "Grid export today"
+      },
+      "self_consumption_today": {
+        "name": "Self-consumption today"
+      },
+      "self_consumption_ratio": {
+        "name": "Self-consumption ratio"
+      },
+      "self_sufficiency_ratio": {
+        "name": "Self-sufficiency"
+      },
+      "inverter_power": {
+        "name": "Power"
+      },
+      "communication": {
+        "name": "Communication"
+      },
+      "relative_output": {
+        "name": "Relative output"
+      },
+      "optimizer_power": {
+        "name": "Power"
+      },
+      "panel_voltage": {
+        "name": "Panel voltage"
+      },
+      "output_voltage": {
+        "name": "Output voltage"
+      },
+      "optimizer_current": {
+        "name": "Current"
+      },
+      "state_of_charge": {
+        "name": "State of charge"
+      },
+      "battery_power": {
+        "name": "Battery power"
+      },
+      "battery_status": {
+        "name": "Battery status",
+        "state": {
+          "charging": "Charging",
+          "discharging": "Discharging",
+          "idle": "Idle"
+        }
+      },
+      "charged_from_pv_today": {
+        "name": "Charged from solar today"
+      },
+      "charged_from_grid_today": {
+        "name": "Charged from grid today"
+      },
+      "discharged_to_home_today": {
+        "name": "Discharged to home today"
+      },
+      "discharged_to_grid_today": {
+        "name": "Discharged to grid today"
+      },
+      "position": {
+        "name": "Position"
+      },
+      "panel_manufacturer": {
+        "name": "Panel manufacturer"
+      },
+      "panel_model": {
+        "name": "Panel model"
+      },
+      "panel_stc_power": {
+        "name": "Panel rated power"
+      },
+      "panel_orientation": {
+        "name": "Panel orientation",
+        "state": {
+          "landscape": "Landscape",
+          "portrait": "Portrait"
+        }
+      },
+      "panel_tilt": {
+        "name": "Panel tilt"
+      },
+      "panel_azimuth": {
+        "name": "Panel azimuth"
+      },
+      "panel_direction": {
+        "name": "Panel direction"
+      }
+    },
+    "binary_sensor": {
+      "communicating": {
+        "name": "Communicating"
+      },
+      "power_limited": {
+        "name": "Power limited"
+      },
+      "alerts": {
+        "name": "Alerts"
+      }
+    },
+    "button": {
+      "import_energy_history": {
+        "name": "Import history"
+      }
+    }
+  },
+  "exceptions": {
+    "recorder_not_running": {
+      "message": "The recorder is not running."
+    },
+    "energy_entity_not_found": {
+      "message": "The Lifetime energy sensor of this site was not found."
+    },
+    "energy_entity_disabled": {
+      "message": "{entity_id} is disabled; enable it first."
+    },
+    "no_statistics_yet": {
+      "message": "{entity_id} has no hourly statistics yet. Try again after the integration has run for an hour."
+    },
+    "no_inverters": {
+      "message": "This site has no inverters to fetch history for."
+    },
+    "no_history_data": {
+      "message": "SolarEdge returned no lifetime energy for this period."
+    },
+    "fetch_failed": {
+      "message": "Fetching the history from SolarEdge failed: {error}"
+    },
+    "import_in_progress": {
+      "message": "An import is already running for this site."
+    },
+    "not_a_site_device": {
+      "message": "Select the site device of a SolarEdge Monitoring installation."
+    },
+    "entry_not_loaded": {
+      "message": "The SolarEdge Monitoring integration for this device is not loaded."
+    }
+  },
+  "services": {
+    "import_energy_history": {
+      "name": "Import energy history",
+      "description": "Fetches the lifetime energy of the inverters per 5 minutes from SolarEdge and imports it as hourly statistics of the site's Lifetime energy sensor. Only hours before the existing statistics are added; existing sums are shifted so there is no jump.",
+      "fields": {
+        "device_id": {
+          "name": "Site",
+          "description": "The SolarEdge site device."
+        },
+        "days": {
+          "name": "Days",
+          "description": "How many days back to import (1–365)."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+# Test-Home Assistant voor de ontwikkeling van deze integratie.
+#   docker compose -f ha-dev/docker-compose.yml up -d     → http://localhost:8123
+#   docker compose -f ha-dev/docker-compose.yml restart   → na een codewijziging
+#   docker compose -f ha-dev/docker-compose.yml down
+# De integratie wordt live gemount; de HA-configuratie (incl. onboarding-account) staat in ha-dev/config.
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:2026.10.4
+    container_name: solaredge-ha-dev
+    ports:
+      - "8123:8123"
+    volumes:
+      - ./config:/config
+      - ../custom_components/solaredge_monitoring:/config/custom_components/solaredge_monitoring:ro
+    environment:
+      - TZ=Europe/Amsterdam
+    restart: unless-stopped

@@ -1,0 +1,114 @@
+{
+  "entity": {
+    "sensor": {
+      "current_power": {
+        "default": "mdi:solar-power-variant"
+      },
+      "ac_power": {
+        "default": "mdi:solar-power-variant-outline"
+      },
+      "energy_today": {
+        "default": "mdi:solar-power"
+      },
+      "energy_this_month": {
+        "default": "mdi:calendar-month"
+      },
+      "energy_this_year": {
+        "default": "mdi:calendar"
+      },
+      "energy_lifetime": {
+        "default": "mdi:counter"
+      },
+      "yield_today": {
+        "default": "mdi:chart-bell-curve"
+      },
+      "yield_this_month": {
+        "default": "mdi:chart-bell-curve"
+      },
+      "yield_this_year": {
+        "default": "mdi:chart-bell-curve"
+      },
+      "peak_power": {
+        "default": "mdi:solar-panel-large"
+      },
+      "open_alerts": {
+        "default": "mdi:alert-circle-outline"
+      },
+      "co2_saved": {
+        "default": "mdi:molecule-co2"
+      },
+      "trees_planted": {
+        "default": "mdi:tree"
+      },
+      "sunrise": {
+        "default": "mdi:weather-sunset-up"
+      },
+      "sunset": {
+        "default": "mdi:weather-sunset-down"
+      },
+      "consumption_power": {
+        "default": "mdi:home-lightning-bolt"
+      },
+      "grid_import_power": {
+        "default": "mdi:transmission-tower-import"
+      },
+      "grid_export_power": {
+        "default": "mdi:transmission-tower-export"
+      },
+      "grid_status": {
+        "default": "mdi:transmission-tower"
+      },
+      "relative_output": {
+        "default": "mdi:solar-panel"
+      },
+      "communication": {
+        "default": "mdi:wifi"
+      },
+      "battery_status": {
+        "default": "mdi:battery-sync"
+      },
+      "position": {
+        "default": "mdi:map-marker"
+      },
+      "panel_manufacturer": {
+        "default": "mdi:factory"
+      },
+      "panel_model": {
+        "default": "mdi:solar-panel"
+      },
+      "panel_stc_power": {
+        "default": "mdi:flash"
+      },
+      "panel_orientation": {
+        "default": "mdi:phone-rotate-landscape",
+        "state": {
+          "portrait": "mdi:phone-rotate-portrait"
+        }
+      },
+      "panel_tilt": {
+        "default": "mdi:angle-acute"
+      },
+      "panel_azimuth": {
+        "default": "mdi:angle-obtuse"
+      },
+      "panel_direction": {
+        "default": "mdi:compass-outline"
+      }
+    },
+    "binary_sensor": {
+      "power_limited": {
+        "default": "mdi:speedometer-slow"
+      }
+    },
+    "button": {
+      "import_energy_history": {
+        "default": "mdi:database-import"
+      }
+    }
+  },
+  "services": {
+    "import_energy_history": {
+      "service": "mdi:database-import"
+    }
+  }
+}

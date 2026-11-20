@@ -1,0 +1,1 @@
+{"id":1000001,"kind":"UTILITY_SITE","name":"Testsite","description":null,"location":{"latitude":52.1,"longitude":5.1,"elevation":0,"countryCode":"NL","stateCode":null,"address":"Teststraat 1"},"timezone":"Europe/Amsterdam","currencyCode":null,"sitePriority":"LOW","peakPowerPkw":3840,"lastDataInput":"2026-11-19T15:29:21.387065312Z"}

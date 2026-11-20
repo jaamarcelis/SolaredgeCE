@@ -1,0 +1,7 @@
+{
+  "name": "SolarEdge Monitoring",
+  "content_in_root": false,
+  "render_readme": true,
+  "country": ["NL", "BE", "DE"],
+  "homeassistant": "2026.10.0"
+}

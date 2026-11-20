@@ -1,0 +1,18 @@
+import_energy_history:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          filter:
+            integration: solaredge_monitoring
+    days:
+      required: false
+      default: 90
+      selector:
+        number:
+          min: 1
+          max: 365
+          step: 1
+          mode: box
+          unit_of_measurement: d
