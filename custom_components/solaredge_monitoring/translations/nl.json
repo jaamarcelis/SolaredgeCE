@@ -322,6 +322,9 @@
     },
     "unit_mismatch": {
       "message": "De eenheid van {entity_id} ({unit}) kan niet worden omgerekend vanuit {api_unit}."
+    },
+    "too_old_for_interval": {
+      "message": "Gegevens per 5 minuten of per uur zijn alleen beschikbaar voor de laatste {days} dagen. Kies het interval 1 dag of een latere begindatum."
     }
   },
   "services": {

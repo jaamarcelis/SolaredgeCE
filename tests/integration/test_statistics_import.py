@@ -31,6 +31,8 @@ from custom_components.solaredge_monitoring.statistics_import import (
     build_import,
     chunks,
     daily_total,
+    day_segments,
+    delta_series,
     fetch_charts,
     fetch_ranges,
     importable_metrics,
@@ -239,16 +241,33 @@ def fake_value(uri: str, moment: datetime) -> float:
     return 230.0 + moment.minute / 5
 
 
+def fake_day_value(uri: str, day_start: datetime) -> float:
+    """Dagresolutie zoals SolarEdge: tellers en momentwaarden als daggemiddelde, delta's als dagtotaal."""
+    day_end = local_midnight(dt_util.as_local(day_start).date() + timedelta(days=1))
+    moments = [day_start + i * M5 for i in range(int((day_end - day_start) / M5))]
+    values = [fake_value(uri, t) for t in moments]
+    return sum(values) if "since_last" in uri else sum(values) / len(values)
+
+
+def _days(start: datetime, end: datetime) -> list[date]:
+    day = dt_util.as_local(start).date()
+    result = []
+    while local_midnight(day) < end:
+        result.append(day)
+        day += timedelta(days=1)
+    return result
+
+
 def history_session() -> FakeSession:
     """Nep-API waarin generate-chart voor elk gevraagd apparaat en elke metric 5-minutenwaarden geeft."""
     session = build_session(site_responses())
-    requests: list[tuple[datetime, datetime]] = []
+    requests: list[tuple[datetime, datetime, str]] = []
 
     def respond(call: Call) -> FakeResponse:
         body = call.json
         start = dt_util.parse_datetime(body["reportPeriod"]["from"])
         end = dt_util.parse_datetime(body["reportPeriod"]["to"])
-        requests.append((start, end))
+        requests.append((start, end, body["datasources"][0]["alignmentGranularity"]))
         moments = []
         moment = start
         while moment < end:
@@ -257,6 +276,11 @@ def history_session() -> FakeSession:
         metas, data = [], []
         for datasource in body["datasources"]:
             uris = [m["uri"] for m in datasource["metrics"]]
+            if datasource["alignmentGranularity"] == "DAY":
+                days = [local_midnight(d) for d in _days(start, end)]
+                rows = [[_iso(t), *(fake_day_value(u, t) for u in uris)] for t in days]
+            else:
+                rows = [[_iso(t), *(fake_value(u, t) for u in uris)] for t in moments]
             category = datasource["metrics"][0]["metricsCategoryName"]
             population = datasource["datasourcePopulation"]
             for serial in population["deviceSerials"]:
@@ -267,7 +291,7 @@ def history_session() -> FakeSession:
                         "datasetName": f"{population['deviceType']}:{category}",
                     }
                 )
-                data.append([[_iso(t), *(fake_value(u, t) for u in uris)] for t in moments])
+                data.append(rows)
         return FakeResponse(200, json.dumps({"meta": {"datasetsMeta": metas}, "data": data}))
 
     session.add_callback("POST", r"generate-chart$", respond)
@@ -405,6 +429,10 @@ async def test_import_site_energy_hour(hass: HomeAssistant, config_entry: MockCo
         interval="day",
     )
     assert earlier["metrics"][0]["hourly_rows"] == 3
+    # Per dag opgehaald, behalve de dag waar de reeks op de bestaande uurrijen aansluit
+    day_requests = [r for r in session.history_requests if r[2] == "DAY"]
+    assert day_requests
+    assert day_requests[0][0] == local_midnight(start_date - timedelta(days=6))
     rows = await stats(hass, statistic_id, start - timedelta(days=5))
     assert len(rows) == result["hourly_rows"] + 1 + 3
     assert_consistent(rows)
@@ -584,3 +612,77 @@ async def test_button_uses_options(hass: HomeAssistant, config_entry: MockConfig
     # Dag-interval: de eerste rij is het laatste uur van eergisteren
     assert rows[0]["start"] == (local_midnight(today - timedelta(days=1)) - H).timestamp()
     assert_consistent(rows)
+
+
+def test_day_segments(hass: HomeAssistant) -> None:
+    day = date(2026, 8, 1)
+    start, end = local_midnight(day), local_midnight(day + timedelta(days=5)) + 3 * H
+    coarse, fine = day_segments(start, end, {day + timedelta(days=2), day + timedelta(days=5)})
+    assert coarse == [
+        (local_midnight(day), local_midnight(day + timedelta(days=2))),
+        (local_midnight(day + timedelta(days=3)), local_midnight(day + timedelta(days=5))),
+    ]
+    assert fine == [
+        (local_midnight(day + timedelta(days=2)), local_midnight(day + timedelta(days=3))),
+        (local_midnight(day + timedelta(days=5)), end),
+    ]
+
+
+def test_delta_series_puts_day_totals_at_day_end(hass: HomeAssistant) -> None:
+    day = local_midnight(date(2026, 8, 1))
+    next_day = local_midnight(date(2026, 8, 2))
+    coarse = [chart({"A": [(day, 1000)], "B": [(day, 500)]}, "energy")]
+    fine = [chart({"A": [(next_day + M5, 10), (next_day + 2 * M5, 20)]}, "energy")]
+    assert delta_series(coarse, fine, "energy") == [(next_day, 1500.0), (next_day + M5, 1510.0), (next_day + 2 * M5, 1530.0)]
+
+
+async def test_hour_interval_too_old(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+    await setup(hass, config_entry, history_session())
+    with pytest.raises(HomeAssistantError) as err:
+        await hass.services.async_call(
+            DOMAIN,
+            "import_statistics",
+            {
+                "device_id": device_id(hass, config_entry, "ABCD1234-EF"),
+                "entity_id": [entity_id(hass, f"{SITE_ID}_ABCD1234-EF_metric_measurements.ac_voltage")],
+                "start": (dt_util.now().date() - timedelta(days=800)).isoformat(),
+                "interval": "hour",
+            },
+            blocking=True,
+        )
+    assert err.value.translation_key == "too_old_for_interval"
+
+
+async def test_day_interval_uses_day_resolution(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+    session = history_session()
+    await setup(hass, config_entry, session)
+    voltage = entity_id(hass, f"{SITE_ID}_ABCD1234-EF_metric_measurements.ac_voltage")
+    lifetime = entity_id(hass, f"{SITE_ID}_ABCD1234-EF_metric_{LIFETIME}")
+    t0 = dt_util.utcnow().replace(minute=0, second=0, microsecond=0) - 2 * H
+    await existing_rows(hass, lifetime, t0, 1, unit="Wh", state_offset=0)
+
+    start_date = dt_util.now().date() - timedelta(days=1000)  # ouder dan 730 dagen: kan alleen per dag
+    end_date = start_date + timedelta(days=9)
+    response = await import_statistics(
+        hass,
+        device_id=device_id(hass, config_entry, "ABCD1234-EF"),
+        entity_id=[voltage, lifetime],
+        start=start_date.isoformat(),
+        end=end_date.isoformat(),
+        interval="day",
+    )
+    assert [m["hourly_rows"] for m in response["metrics"]] == [10, 10]
+    imports = [r for r in session.history_requests if r[1] - r[0] > 3 * H]
+    assert {r[2] for r in imports} == {"DAY"} | ({"FIVE_MINUTES"} if any(r[2] == "FIVE_MINUTES" for r in imports) else set())
+    assert all(r[0] >= dt_util.utcnow() - timedelta(days=730) for r in imports if r[2] == "FIVE_MINUTES")
+
+    means = await stats(hass, voltage, local_midnight(start_date), types={"mean", "min", "max"})
+    assert len(means) == 10
+    assert means[0]["mean"] == pytest.approx(235.5)
+    assert means[0]["min"] is None
+
+    rows = await stats(hass, lifetime, local_midnight(start_date))
+    sums = [r["sum"] for r in rows[:10]]
+    assert all(b - a == pytest.approx(28800) for a, b in itertools.pairwise(sums))
+    # De reeks sluit aan op de bestaande rij: alles daarna schuift mee zonder terugval
+    assert all(b["sum"] >= a["sum"] for a, b in itertools.pairwise(rows))

@@ -322,6 +322,9 @@
     },
     "unit_mismatch": {
       "message": "The unit of {entity_id} ({unit}) cannot be converted from {api_unit}."
+    },
+    "too_old_for_interval": {
+      "message": "Data per 5 minutes or per hour is only available for the last {days} days. Choose the interval 1 day or a later start date."
     }
   },
   "services": {

@@ -57,12 +57,17 @@ DAY = timedelta(days=1)
 LOOKBACK = timedelta(days=1)  # 's nachts meet de omvormer niet: de stand van het begin komt van de dag ervoor
 NEAR = timedelta(days=7)  # ankerpunten dichter bij de periode worden in dezelfde requests meegenomen
 PREV_SEARCH = (timedelta(days=2), timedelta(days=35), timedelta(days=400), None)
+DAY_CHUNK = timedelta(days=366)  # met dagresolutie gaan zelfs jaren in één request
+FINE_LIMIT = timedelta(days=729)  # SolarEdge levert 5-minuten- en uurdata maar 730 dagen terug
 
 type Interval = Literal["five_minutes", "hour", "day"]
 type Kind = Literal["gauge", "cumulative", "delta"]
 type Series = list[tuple[datetime, float]]
 
 KIND_BY_API = {"GAUGE": "gauge", "CUMULATIVE": "cumulative", "DELTA": "delta"}
+
+# Teller → de delta-metric met dezelfde energie. Per dag is de teller een daggemiddelde, de delta de dagproductie.
+DELTA_PAIRS = {"measurements.lifetime_positive_ac_energy": "measurements.positive_ac_energy_since_last_telemetry"}
 
 # Vaste sensoren met een historische bron: sleutel van de sensor → metric ("categorie.uri")
 SITE_SOURCES = {
@@ -104,6 +109,7 @@ class ImportableMetric:
     api_unit: str | None  # Home Assistant-eenheid van de API-waarden
     device_class: SensorDeviceClass | None
     sources: tuple[tuple[str, tuple[str, ...]], ...]  # (analysis-apparaattype, identifiers); waarden worden opgeteld
+    delta_metric: str | None = None  # energie per meting; voor dagresolutie (zie DELTA_PAIRS)
 
     @property
     def has_sum(self) -> bool:
@@ -242,8 +248,15 @@ def importable_metrics(hass: HomeAssistant, model: SiteModel, device_id: str) ->
         if entry is None or not _matches(entry, metric_kind):
             continue
         name = entry.name or entry.original_name or entry.entity_id
+        delta_metric = metric if metric_kind == "delta" else None
+        if metric_kind == "cumulative" and (pair := DELTA_PAIRS.get(metric)):
+            pairs = [model.history_metrics.get(t, {}).get(pair) for t, _ in sources]
+            if all(p is not None and p[0] == api_units and p[1] == "DELTA" for p in pairs):
+                delta_metric = pair
         result.append(
-            ImportableMetric(unique_id, entry.entity_id, str(name), metric, metric_kind, api_unit, device_class, sources)
+            ImportableMetric(
+                unique_id, entry.entity_id, str(name), metric, metric_kind, api_unit, device_class, sources, delta_metric
+            )
         )
     return result
 
@@ -419,8 +432,13 @@ def build_import(
     return ImportPlan(hourly, short_term, adjustment, nxt.start if nxt and adjustment else None)
 
 
-def build_gauge_import(series: Series, start: datetime, end: datetime, interval: Interval) -> ImportPlan:
-    """Gemiddelde, minimum en maximum van de metingen in elke periode (meting op ``t`` hoort bij ``[t, t+5m)``)."""
+def build_gauge_import(
+    series: Series, start: datetime, end: datetime, interval: Interval, *, mean_only: bool = False
+) -> ImportPlan:
+    """Gemiddelde, minimum en maximum van de metingen in elke periode (meting op ``t`` hoort bij ``[t, t+5m)``).
+
+    ``mean_only``: de metingen zijn al daggemiddelden (dagresolutie); minimum en maximum zijn dan onbekend.
+    """
 
     def aggregate(row_start: datetime, row_end: datetime) -> StatisticData | None:
         lo = bisect.bisect_left(times, row_start)
@@ -428,6 +446,8 @@ def build_gauge_import(series: Series, start: datetime, end: datetime, interval:
         values = [v for _, v in series[lo:hi]]
         if not values:
             return None
+        if mean_only:
+            return StatisticData(start=row_start, mean=round(sum(values) / len(values), 6))
         return StatisticData(
             start=row_start, mean=round(sum(values) / len(values), 6), min=round(min(values), 6), max=round(max(values), 6)
         )
@@ -493,30 +513,130 @@ def fetch_ranges(
     return [(s, min(e, now)) for s, e in ranges if s < now]
 
 
+def local_midnight(day: date) -> datetime:
+    """Begin van een lokale dag, in UTC."""
+    return dt_util.as_utc(dt_util.start_of_local_day(day))
+
+
+def day_of(moment: datetime) -> date:
+    """De lokale dag waarin een periode die op ``moment`` eindigt valt."""
+    return dt_util.as_local(moment - timedelta(microseconds=1)).date()
+
+
+def day_segments(
+    start: datetime, end: datetime, fine_days: set[date]
+) -> tuple[list[tuple[datetime, datetime]], list[tuple[datetime, datetime]]]:
+    """Hele lokale dagen van ``[start, end)`` in (dag-, 5-minuten-)bereiken; ``fine_days`` per 5 minuten."""
+    coarse: list[tuple[datetime, datetime]] = []
+    fine: list[tuple[datetime, datetime]] = []
+    day = dt_util.as_local(start).date()
+    last = day_of(end)
+    while day <= last:
+        is_fine = day in fine_days
+        first = day
+        while day + DAY <= last and (day + DAY in fine_days) == is_fine:
+            day += DAY
+        segment_end = local_midnight(day + DAY)
+        if is_fine:
+            fine.append((local_midnight(first), min(segment_end, end)))
+        else:
+            coarse.append((local_midnight(first), segment_end))
+        day += DAY
+    return coarse, fine
+
+
+def _points(charts: list[GenerateChartResponse], uri: str) -> dict[str, list[tuple[datetime, float]]]:
+    """Per apparaat de numerieke waarden van ``uri``, op tijd gesorteerd."""
+    per_device: dict[str, dict[datetime, float]] = {}
+    for chart in charts:
+        if not chart.meta:
+            continue
+        for index, dataset in enumerate(chart.meta.datasets_meta):
+            column = next((i for i, m in enumerate(dataset.metrics) if m.uri == uri), None)
+            if column is None:
+                continue
+            device = dataset.report_object.entity_id if dataset.report_object else str(index)
+            values = per_device.setdefault(device, {})
+            for point in chart.points(index):
+                value = point.values[column] if column < len(point.values) else None
+                if isinstance(value, int | float) and not isinstance(value, bool):
+                    values[point.timestamp] = float(value)
+    return {device: sorted(values.items()) for device, values in per_device.items()}
+
+
+def delta_series(
+    coarse: list[GenerateChartResponse],
+    fine: list[GenerateChartResponse],
+    uri: str,
+    *,
+    fine_uri: str | None = None,
+) -> Series:
+    """Lopende som over alle apparaten: dagtotalen van ``uri`` (op het eind van de dag gezet) plus de 5-minutendata.
+
+    De 5-minutendata zijn delta's van ``uri``, of bij ``fine_uri`` standen van een teller; dan tellen de verschillen
+    tussen opeenvolgende standen (preciezer dan de delta's), behalve over dagen die al als dagtotaal meetellen.
+    Op de grens telt het dagtotaal: een 5-minutenwaarde precies om middernacht na een dagtotaal valt weg ('s nachts 0).
+    """
+    events: dict[datetime, float] = {}
+    for values in _points(coarse, uri).values():
+        for timestamp, value in values:
+            moment = local_midnight(dt_util.as_local(timestamp).date() + DAY)
+            events[moment] = events.get(moment, 0.0) + value
+    day_ends = sorted(events)
+    day_end_set = set(day_ends)
+
+    for values in _points(fine, fine_uri or uri).values():
+        previous: tuple[datetime, float] | None = None
+        for timestamp, value in values:
+            if fine_uri is None:
+                # Om middernacht na een dagtotaal: die 5 minuten zitten er al in (of zijn 's nachts 0)
+                if timestamp not in day_end_set:
+                    events[timestamp] = events.get(timestamp, 0.0) + value
+                continue
+            # Een teller: het verschil met de vorige stand, tenzij er een dagtotaal tussen zit
+            if previous is not None and bisect.bisect_right(day_ends, timestamp) == bisect.bisect_right(day_ends, previous[0]):
+                events[timestamp] = events.get(timestamp, 0.0) + value - previous[1]
+            previous = (timestamp, value)
+
+    series: Series = []
+    total = 0.0
+    for moment in sorted(events):
+        total += events[moment]
+        series.append((moment, total))
+    return series
+
+
 # --- Ophalen en importeren ----------------------------------------------------------------------
 
 
 async def fetch_charts(
-    client: SolarEdgeMonitoringClient, site_id: int, metric: ImportableMetric, ranges: list[tuple[datetime, datetime]]
+    client: SolarEdgeMonitoringClient,
+    site_id: int,
+    metric: ImportableMetric,
+    ranges: list[tuple[datetime, datetime]],
+    *,
+    uri: str | None = None,
+    granularity: str = "FIVE_MINUTES",
 ) -> list[GenerateChartResponse]:
-    """generate-chart per 5 minuten over ``ranges``, in blokken van 7 dagen (kleiner bij EXPORT_LIMIT_REACHED)."""
-    category, uri = metric.metric.split(".", 1)
+    """generate-chart over ``ranges`` in blokken (7 dagen, of een jaar per dag), kleiner bij EXPORT_LIMIT_REACHED."""
+    category, name = (uri or metric.metric).split(".", 1)
     datasources = [
-        measurement_datasource(site_id, device_type, identifiers, [(category, uri)], "FIVE_MINUTES")
+        measurement_datasource(site_id, device_type, identifiers, [(category, name)], granularity)
         for device_type, identifiers in metric.sources
     ]
+    size = DAY_CHUNK if granularity == "DAY" else CHUNK
     charts: list[GenerateChartResponse] = []
-    pending = [c for start, end in ranges for c in chunks(start, end)]
+    pending = [c for start, end in ranges for c in chunks(start, end, size)]
     while pending:
         chunk_start, chunk_end = pending.pop(0)
         try:
             charts.append(await client.analysis.generate_chart(site_id, chunk_start, chunk_end, datasources))
         except ApiError as err:
             size = chunk_end - chunk_start
-            if err.code != "EXPORT_LIMIT_REACHED" or size <= MIN_CHUNK:
+            if err.code != "EXPORT_LIMIT_REACHED" or size <= MIN_CHUNK or "730 days" in (err.detail or str(err)):
                 raise
             pending[:0] = chunks(chunk_start, chunk_end, max(size / 2, MIN_CHUNK))
-    _LOGGER.debug("%s: %d blokken opgehaald (%s)", metric.entity_id, len(charts), ranges)
+    _LOGGER.debug("%s: %d blokken per %s opgehaald (%s)", metric.entity_id, len(charts), granularity, ranges)
     return charts
 
 
@@ -609,11 +729,41 @@ async def async_import_metric(
     now = dt_util.utcnow()
     recorder = get_instance(hass)
 
+    day_resolution = interval == HISTORY_INTERVAL_DAY
+    if not day_resolution and start < now - FINE_LIMIT:
+        raise HistoryImportError("too_old_for_interval", days=str(FINE_LIMIT.days + 1))
+
     if not metric.has_sum:
-        charts = await fetch_charts(client, model.site_id, metric, [(start, end)]) if start < end else []
+        granularity = "DAY" if day_resolution else "FIVE_MINUTES"
+        charts = await fetch_charts(client, model.site_id, metric, [(start, end)], granularity=granularity) if start < end else []
         series = [(t, convert(v)) for t, v in metric_series(charts, metric.metric.split(".", 1)[1])]
-        plan = build_gauge_import(series, start, end, interval)
+        plan = build_gauge_import(series, start, end, interval, mean_only=day_resolution)
         adjustment: float | None = None
+    elif day_resolution and metric.delta_metric is not None:
+        existing, last_start = await recorder.async_add_executor_job(load_existing, hass, metric.entity_id, start, end)
+        if last_start is None:
+            raise HistoryImportError("no_statistics_yet", entity_id=metric.entity_id)
+        end = min(end, last_start)
+        if start >= end:
+            return MetricResult(metric.entity_id, metric.name, 0, 0, 0.0)
+        ((fetch_start, fetch_end),) = fetch_ranges(start, end, existing, now, contiguous=True)
+        # Per 5 minuten alleen waar het moet: dagen met bestaande uurrijen en dagen met een ankerpunt midden op de dag
+        fine_moments = [*existing.hourly]
+        for row in (existing.prev, existing.next):
+            if row is not None and row.start + HOUR != local_midnight(dt_util.as_local(row.start + HOUR).date()):
+                fine_moments.append(row.start)
+        fine_days = {dt_util.as_local(m).date() for m in fine_moments if m >= now - FINE_LIMIT}
+        coarse_ranges, fine_ranges = day_segments(fetch_start, fetch_end, fine_days)
+        uri = metric.delta_metric
+        coarse = await fetch_charts(client, model.site_id, metric, coarse_ranges, uri=uri, granularity="DAY")
+        # 5-minutendagen van een teller: de standen zelf (de delta's per 5 minuten lopen iets achter op de teller)
+        fine_uri = metric.metric if metric.kind == "cumulative" else uri
+        fine = await fetch_charts(client, model.site_id, metric, fine_ranges, uri=fine_uri) if fine_ranges else []
+        fine_name = fine_uri.split(".", 1)[1] if metric.kind == "cumulative" else None
+        series = [(t, convert(v)) for t, v in delta_series(coarse, fine, uri.split(".", 1)[1], fine_uri=fine_name)]
+        state_of = daily_total(series) if metric.kind == "delta" and series else None
+        plan = build_import(series, start, end, interval, existing, state_of)
+        adjustment = plan.sum_adjustment
     else:
         existing, last_start = await recorder.async_add_executor_job(load_existing, hass, metric.entity_id, start, end)
         if last_start is None:

@@ -73,14 +73,17 @@ Welke sensoren historie hebben (bron: `generate-chart`, per 5 minuten):
 
 Batterij en meter hebben geen bron in deze API. Welke metrics er zijn, verschilt per installatie: de lijst komt bij het opstarten uit de API.
 
-| Interval | Wat er geschreven wordt |
-|---|---|
-| `five_minutes` | 5-minutenstatistieken plus uurstatistieken. Home Assistant bewaart 5-minutenstatistieken maar zo lang als `keep_days` van de recorder (standaard 10 dagen); de uurrijen blijven. |
-| `hour` | een uurstatistiek per uur |
-| `day` | één rij per dag. Bij energie in het laatste uur van de dag (de stand aan het eind van de dag), bij momentwaarden in het eerste uur (het daggemiddelde, minimum en maximum). |
+| Interval | Opgehaald | Wat er geschreven wordt |
+|---|---|---|
+| `five_minutes` | per 5 minuten | 5-minutenstatistieken plus uurstatistieken. Home Assistant bewaart 5-minutenstatistieken maar zo lang als `keep_days` van de recorder (standaard 10 dagen); de uurrijen blijven. |
+| `hour` | per 5 minuten | een uurstatistiek per uur |
+| `day` | per dag | één rij per dag. Bij energie in het laatste uur van de dag (de stand aan het eind van de dag), bij momentwaarden in het eerste uur (alleen het daggemiddelde; minimum en maximum levert SolarEdge per dag niet). |
+
+SolarEdge levert gegevens per 5 minuten of per uur alleen voor de **laatste 730 dagen**. Wil je verder terug, kies dan `day`; daarmee gaat een import vanaf de ingebruikname van je installatie in een paar requests.
 
 Hoe het werkt:
 - **Momentwaarden** (vermogen, spanning, temperatuur): gemiddelde, minimum en maximum per periode. Eenheden worden omgerekend naar die van de sensor (bijv. °C → °F).
+- **Tellers en energie per dag**: de dagproductie komt uit de delta-metric van SolarEdge (een dagwaarde van een teller is een daggemiddelde en dus onbruikbaar). Op dagen waar al uurstatistieken zijn, of waar de reeks aansluit op bestaande statistieken, wordt per 5 minuten opgehaald, zodat die uren kloppen.
 - **Tellers en energie**: de som sluit aan op de statistiek vóór de periode. Bestaande statistieken binnen de periode worden met dezelfde reeks herschreven en alles erna schuift mee, zodat er geen sprong ontstaat. *Energie vandaag* begint elke dag weer op 0; de som loopt door.
 - Dezelfde import nog een keer doen verandert niets. Je kunt later ook een andere periode of een fijner interval importeren.
 - Energie eindigt uiterlijk bij de laatste uurstatistiek: vanaf daar telt de recorder zelf verder. Zo'n sensor moet dus al minstens één uurstatistiek hebben; wacht na het toevoegen van de integratie ongeveer een uur.
