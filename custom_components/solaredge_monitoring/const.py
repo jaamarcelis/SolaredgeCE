@@ -20,6 +20,15 @@ CONF_PANELS_INTERVAL: Final = "panels_interval"  # minuten
 CONF_INFO_INTERVAL: Final = "info_interval"  # minuten
 CONF_INCLUDE_OPTIMIZERS: Final = "include_optimizers"
 CONF_TELEMETRY_METRICS: Final = "telemetry_metrics"  # lijst "categorie.uri"; leeg = alle ontdekte
+CONF_HISTORY_DAYS: Final = "history_days"  # knop Historie importeren: aantal dagen tot en met vandaag
+CONF_HISTORY_INTERVAL: Final = "history_interval"  # knop Historie importeren: interval van de rijen
+
+HISTORY_INTERVAL_FIVE_MINUTES: Final = "five_minutes"
+HISTORY_INTERVAL_HOUR: Final = "hour"
+HISTORY_INTERVAL_DAY: Final = "day"
+HISTORY_INTERVALS: Final = (HISTORY_INTERVAL_FIVE_MINUTES, HISTORY_INTERVAL_HOUR, HISTORY_INTERVAL_DAY)
+DEFAULT_HISTORY_DAYS: Final = 14
+MAX_HISTORY_DAYS: Final = 3650
 
 DEFAULT_LIVE_INTERVAL: Final = 60
 DEFAULT_ENERGY_INTERVAL: Final = 5

@@ -43,27 +43,36 @@ Devices: **site → omvormer(s) → optimizer(s)**, plus een **batterij** als je
 ### Historie importeren
 De statistieken van **Energie totaal** beginnen pas op het moment dat je de integratie toevoegt. De historie ervoor haal je zo op:
 
-- de knop **Historie importeren** op het site-device (de afgelopen 90 dagen; het resultaat verschijnt als melding), of
-- de actie `solaredge_monitoring.import_energy_history` met het site-device en optioneel `days` (1–365, standaard 90). De actie geeft het resultaat terug als response.
+- de knop **Historie importeren** op het site-device. Die importeert de laatste *N* dagen tot en met vandaag met het gekozen interval; beide stel je in bij de opties (standaard 14 dagen, 1 uur). Het resultaat verschijnt als melding.
+- de actie `solaredge_monitoring.import_energy_history` met het site-device, een begindatum, optioneel een einddatum (standaard vandaag) en een interval. De actie geeft het resultaat terug als response.
 
 ```yaml
 action: solaredge_monitoring.import_energy_history
 data:
   device_id: <id van het site-device>
-  days: 90
+  start: "2026-08-01"
+  end: "2026-11-19"     # optioneel, tot en met; standaard vandaag
+  interval: hour        # five_minutes, hour (standaard) of day
 ```
 
+| Interval | Wat er geschreven wordt |
+|---|---|
+| `five_minutes` | 5-minutenstatistieken plus uurstatistieken. Home Assistant bewaart 5-minutenstatistieken maar zo lang als `keep_days` van de recorder (standaard 10 dagen); de uurrijen blijven. |
+| `hour` | een uurstatistiek per uur |
+| `day` | één uurstatistiek per dag, in het laatste uur van de dag, met de stand aan het eind van de dag. Genoeg voor dagtotalen in het Energy-dashboard. |
+
 Hoe het werkt:
-- SolarEdge levert de lifetime-teller van de omvormers per 5 minuten. Langetermijnstatistieken in Home Assistant zijn **per uur**, dus de stand aan het eind van elk uur wordt geïmporteerd. 's Nachts meet de omvormer niet; die uren krijgen geen rij, maar de som loopt gewoon door.
-- Alleen uren **vóór** de bestaande statistieken worden toegevoegd. De sommen van de bestaande uren schuiven mee, zodat de grafiek en het Energy-dashboard zonder sprong doorlopen.
-- Nog een keer draaien is veilig: met hetzelfde aantal dagen gebeurt er niets, met meer dagen wordt alleen het stuk ervoor aangevuld.
-- De sensor moet al minstens één uurstatistiek hebben. Wacht na het toevoegen van de integratie dus ongeveer een uur.
+- SolarEdge levert de lifetime-teller van de omvormers per 5 minuten; die wordt altijd per 5 minuten opgehaald en daarna per interval omgezet.
+- De sommen sluiten aan op de statistiek vóór de periode. Bestaande statistieken binnen de periode worden met dezelfde reeks herschreven, en alles erna schuift mee, zodat grafieken en het Energy-dashboard zonder sprong doorlopen.
+- Dezelfde import nog een keer doen verandert niets. Je kunt ook later een andere periode of een fijner interval importeren.
+- De periode eindigt uiterlijk bij de laatste uurstatistiek: vanaf daar telt de recorder zelf verder. De sensor moet dus al minstens één uurstatistiek hebben; wacht na het toevoegen van de integratie ongeveer een uur.
 
 ### Opties
 **Instellingen → SolarEdge Monitoring → Configureren:**
 - pollintervallen per soort data (live 60 s, energie 5 min, telemetrie en panelen 15 min, weer en alerts 30 min)
 - devices per optimizer aan/uit
 - welke omvormermetrics opgehaald worden (de lijst wordt automatisch gevuld vanuit de API)
+- aantal dagen en interval voor de knop **Historie importeren** (standaard 14 dagen, 1 uur)
 
 ## Ontwikkeling
 

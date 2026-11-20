@@ -6,13 +6,21 @@ import_energy_history:
         device:
           filter:
             integration: solaredge_monitoring
-    days:
-      required: false
-      default: 90
+    start:
+      required: true
       selector:
-        number:
-          min: 1
-          max: 365
-          step: 1
-          mode: box
-          unit_of_measurement: d
+        date:
+    end:
+      required: false
+      selector:
+        date:
+    interval:
+      required: false
+      default: hour
+      selector:
+        select:
+          translation_key: interval
+          options:
+            - five_minutes
+            - hour
+            - day

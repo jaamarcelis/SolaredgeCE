@@ -1,25 +1,31 @@
 """Historie van *Energie totaal* ophalen bij SolarEdge en importeren in de recorderstatistieken.
 
-SolarEdge levert de lifetime-teller van elke omvormer (``lifetime_positive_ac_energy``, Wh) per 5 minuten.
-Langetermijnstatistieken in Home Assistant zijn per uur, dus de stand aan het eind van elk uur wordt geïmporteerd
-in de statistieken van de sensor *Energie totaal* van het site-device.
+SolarEdge levert de lifetime-teller van elke omvormer (``lifetime_positive_ac_energy``, Wh) per 5 minuten. Daaruit
+worden rijen gemaakt voor de statistieken van de sensor *Energie totaal* van het site-device, met een instelbaar
+interval:
 
-Alleen uren vóór de eerste bestaande uurrij worden geïmporteerd. Daarna worden de sommen van de bestaande rijen
-verschoven, zodat de grafiek en het Energy-dashboard zonder sprong doorlopen. Een tweede run met hetzelfde aantal
-dagen doet niets; een run met meer dagen vult alleen het stuk ervoor aan.
+- ``five_minutes``: kortetermijnstatistieken per 5 minuten (de recorder ruimt die na ``keep_days`` op) plus uurrijen;
+- ``hour``: een uurrij per uur;
+- ``day``: één uurrij per dag, in het laatste uur van de (lokale) dag, met de stand aan het eind van de dag.
+
+Sommen sluiten aan op de bestaande rij vóór de periode. Bestaande rijen binnen de periode worden herschreven met
+dezelfde reeks, en alle rijen erna worden verschoven, zodat grafieken en het Energy-dashboard zonder sprong doorlopen.
+Dezelfde import nog een keer doen verandert dus niets. De periode eindigt uiterlijk bij de laatste uurrij van de
+recorder: daar telt de recorder zelf verder.
 """
 
 from __future__ import annotations
 
 import bisect
-from dataclasses import dataclass
-from datetime import datetime, timedelta
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta
 import logging
-from typing import Any
+from typing import Any, Literal
 
 from homeassistant.components.recorder import get_instance
+from homeassistant.components.recorder.db_schema import Statistics, StatisticsShortTerm
 from homeassistant.components.recorder.models import StatisticData, StatisticMeanType, StatisticMetaData
-from homeassistant.components.recorder.statistics import async_import_statistics, statistics_during_period
+from homeassistant.components.recorder.statistics import statistics_during_period
 from homeassistant.const import Platform, UnitOfEnergy
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -28,7 +34,7 @@ from homeassistant.util import dt as dt_util
 
 from .api import ApiError, SolarEdgeMonitoringClient, measurement_datasource
 from .api.models import GenerateChartResponse
-from .const import DOMAIN
+from .const import DOMAIN, HISTORY_INTERVAL_DAY, HISTORY_INTERVAL_FIVE_MINUTES, HISTORY_INTERVAL_HOUR
 from .discovery import SiteModel
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,9 +42,14 @@ _LOGGER = logging.getLogger(__name__)
 LIFETIME_METRIC = ("measurements", "lifetime_positive_ac_energy")
 CHUNK = timedelta(days=7)  # generate-chart weigert meer dan ~14 dagen per request (EXPORT_LIMIT_REACHED)
 MIN_CHUNK = timedelta(days=1)
+FIVE_MINUTES = timedelta(minutes=5)
 HOUR = timedelta(hours=1)
-DEFAULT_DAYS = 90
-MAX_DAYS = 365
+DAY = timedelta(days=1)
+LOOKBACK = timedelta(days=1)  # 's nachts meet de omvormer niet: de stand van het begin komt van de dag ervoor
+NEAR = timedelta(days=7)  # ankerpunten dichter bij de periode worden in dezelfde requests meegenomen
+PREV_SEARCH = (timedelta(days=2), timedelta(days=35), timedelta(days=400), None)
+
+type Interval = Literal["five_minutes", "hour", "day"]
 
 
 class HistoryImportError(HomeAssistantError):
@@ -50,8 +61,8 @@ class HistoryImportError(HomeAssistantError):
 
 
 @dataclass(slots=True)
-class ExistingStart:
-    """De eerste bestaande uurrij in het venster: begin, stand en som."""
+class Row:
+    """Een bestaande statistiekrij."""
 
     start: datetime
     state: float | None
@@ -59,11 +70,22 @@ class ExistingStart:
 
 
 @dataclass(slots=True)
-class ImportPlan:
-    """Wat er geïmporteerd en aangepast wordt; puur berekend, zonder HA."""
+class Existing:
+    """De bestaande statistieken rond de periode."""
 
-    rows: list[StatisticData]
-    sum_adjustment: float  # op te tellen bij de bestaande rijen vanaf ``adjust_from``
+    prev: Row | None  # laatste uurrij vóór de periode
+    next: Row | None  # eerste uurrij vanaf het eind van de periode
+    hourly: list[datetime] = field(default_factory=list)  # bestaande uurrijen binnen de periode
+    short_term: list[datetime] = field(default_factory=list)  # bestaande 5-minutenrijen tot ``next``
+
+
+@dataclass(slots=True)
+class ImportPlan:
+    """Wat er geschreven en verschoven wordt; puur berekend, zonder HA."""
+
+    hourly: list[StatisticData]
+    short_term: list[StatisticData]
+    sum_adjustment: float  # op te tellen bij alle rijen vanaf ``adjust_from``
     adjust_from: datetime | None
 
 
@@ -72,18 +94,22 @@ class ImportResult:
     """Resultaat voor de actie-response en de melding."""
 
     statistic_id: str
-    imported_hours: int
-    first_hour: datetime | None
-    last_hour: datetime | None
+    interval: Interval
+    start: datetime
+    end: datetime
+    hourly_rows: int
+    short_term_rows: int
     sum_adjustment: float
 
     def as_dict(self) -> dict[str, Any]:
         """Voor de response van de actie."""
         return {
             "statistic_id": self.statistic_id,
-            "imported_hours": self.imported_hours,
-            "from": self.first_hour.isoformat() if self.first_hour else None,
-            "to": (self.last_hour + HOUR).isoformat() if self.last_hour else None,
+            "interval": self.interval,
+            "from": self.start.isoformat(),
+            "to": self.end.isoformat(),
+            "hourly_rows": self.hourly_rows,
+            "short_term_rows": self.short_term_rows,
             "sum_adjustment_kwh": round(self.sum_adjustment, 3),
         }
 
@@ -132,44 +158,99 @@ def value_at(series: list[tuple[datetime, float]], moment: datetime) -> float | 
     return series[index - 1][1] if index else None
 
 
+def interval_starts(start: datetime, end: datetime, interval: Interval) -> tuple[list[datetime], list[datetime]]:
+    """Begintijden van de eigen rijen in ``[start, end)``: (uurrijen, 5-minutenrijen).
+
+    Bij ``day`` is dat het laatste uur van elke lokale dag, zodat de dagstand op het eind van de dag valt.
+    """
+    hourly: list[datetime] = []
+    short_term: list[datetime] = []
+    if interval == HISTORY_INTERVAL_DAY:
+        day = dt_util.as_local(start).date()
+        while True:
+            last_hour = dt_util.as_utc(dt_util.start_of_local_day(day + DAY)) - HOUR
+            if last_hour >= end:
+                break
+            if last_hour >= start:
+                hourly.append(last_hour)
+            day += DAY
+        return hourly, short_term
+
+    moment = start
+    while moment < end:
+        hourly.append(moment)
+        moment += HOUR
+    if interval == HISTORY_INTERVAL_FIVE_MINUTES:
+        moment = start
+        while moment < end:
+            short_term.append(moment)
+            moment += FIVE_MINUTES
+    return hourly, short_term
+
+
 def build_import(
     series: list[tuple[datetime, float]],
-    window_start: datetime,
-    existing: ExistingStart,
+    start: datetime,
+    end: datetime,
+    interval: Interval,
+    existing: Existing,
 ) -> ImportPlan:
-    """Uurrijen vóór de eerste bestaande rij, en de verschuiving van de bestaande sommen.
+    """Rijen voor ``[start, end)`` en de verschuiving van de rijen erna.
 
-    - ``base`` = de eerste waarde in het venster; ``sum`` van uur h = L(eind h) − base.
-    - ``state`` wordt verschoven met ``offset`` zodat hij aansluit op de stand van de sensor in de eerste
-      bestaande rij (de site-teller en de omvormertellers wijken iets van elkaar af).
-    - De bestaande rijen vanaf ``existing.start`` krijgen ``(L(eind t0) − base) − sum(t0)`` erbij.
+    - Som: aansluitend op de laatste rij vóór de periode, ``prev.sum + L(t) − L(eind prev)``. Zonder eerdere rij
+      begint de som op 0 bij de eerste meting.
+    - Stand: ``L(t) + offset``; de offset laat de stand aansluiten op de sensor (site- en omvormerteller wijken af).
+    - Bestaande rijen binnen de periode worden met dezelfde reeks herschreven; rijen vanaf ``next`` verschoven.
     """
-    window_start = window_start.replace(minute=0, second=0, microsecond=0)
-    in_window = [(t, v) for t, v in series if t >= window_start]
-    if not in_window or existing.start <= window_start:
-        return ImportPlan([], 0.0, None)
+    if not series or start >= end:
+        return ImportPlan([], [], 0.0, None)
+    last_time = series[-1][0]
+    first_time = series[0][0]
 
-    base = in_window[0][1]
-    t0_end = existing.start + HOUR
-    lifetime_t0 = value_at(series, t0_end)
-    offset = existing.state - lifetime_t0 if existing.state is not None and lifetime_t0 is not None else 0.0
+    def lifetime(moment: datetime) -> float | None:
+        return value_at(series, moment)
 
-    times = [t for t, _ in in_window]
-    rows: list[StatisticData] = []
-    hour = window_start
-    while hour < existing.start:
-        index = bisect.bisect_right(times, hour + HOUR)
-        # Alleen uren met minstens één meting erin (na het begin van het uur)
-        if index and times[index - 1] > hour:
-            value = in_window[index - 1][1]
-            rows.append(StatisticData(start=hour, state=round(value + offset, 3), sum=round(value - base, 3)))
-        hour += HOUR
+    prev, nxt = existing.prev, existing.next
+    prev_l = lifetime(prev.start + HOUR) if prev else None
+    next_l = lifetime(nxt.start + HOUR) if nxt else None
 
-    if not rows:
-        return ImportPlan([], 0.0, None)
-    # Zonder data voor het eind van t0: neem aan dat de som van t0 alleen de productie binnen t0 bevat
-    expected_t0 = lifetime_t0 - base if lifetime_t0 is not None else rows[-1]["sum"] + existing.sum
-    return ImportPlan(rows, round(expected_t0 - existing.sum, 3), existing.start)
+    if nxt is not None and nxt.state is not None and next_l is not None:
+        offset = nxt.state - next_l
+    elif prev is not None and prev.state is not None and prev_l is not None:
+        offset = prev.state - prev_l
+    else:
+        offset = 0.0
+
+    if prev is not None and prev_l is not None:
+        anchor_l, anchor_sum = prev_l, prev.sum
+    elif prev is not None and prev.state is not None:
+        anchor_l, anchor_sum = prev.state - offset, prev.sum  # geen meting bij prev: via de stand
+    else:
+        start_l = lifetime(start)
+        anchor_l = start_l if start_l is not None else next((v for t, v in series if t >= start), series[-1][1])
+        anchor_sum = 0.0
+
+    def row(row_start: datetime, length: timedelta) -> StatisticData | None:
+        row_end = row_start + length
+        if row_end <= first_time or row_start >= last_time:
+            return None  # geen meting in of vóór deze rij, of al voorbij de laatste
+        value = lifetime(row_end)
+        if value is None:
+            return None
+        return StatisticData(start=row_start, state=round(value + offset, 3), sum=round(anchor_sum + value - anchor_l, 3))
+
+    own_hourly, own_short = interval_starts(start, end, interval)
+    hourly_starts = sorted(set(own_hourly) | {t for t in existing.hourly if start <= t < end})
+    short_limit = nxt.start if nxt else end
+    short_starts = sorted(set(own_short) | {t for t in existing.short_term if start <= t < short_limit})
+
+    hourly = [r for t in hourly_starts if (r := row(t, HOUR))]
+    short_term = [r for t in short_starts if (r := row(t, FIVE_MINUTES))]
+
+    adjustment = 0.0
+    if nxt is not None and next_l is not None and (hourly or short_term):
+        adjustment = round(anchor_sum + next_l - anchor_l - nxt.sum, 3)
+    return ImportPlan(hourly, short_term, adjustment, nxt.start if nxt and adjustment else None)
 
 
 def chunks(start: datetime, end: datetime, size: timedelta = CHUNK) -> list[tuple[datetime, datetime]]:
@@ -179,6 +260,26 @@ def chunks(start: datetime, end: datetime, size: timedelta = CHUNK) -> list[tupl
         result.append((start, min(start + size, end)))
         start += size
     return result
+
+
+def fetch_ranges(start: datetime, end: datetime, existing: Existing, now: datetime) -> list[tuple[datetime, datetime]]:
+    """Op te halen bereiken: de periode (met een dag ervoor) plus kleine stukken rond verre ankerpunten."""
+    main_start, main_end = start - LOOKBACK, end
+    extra: list[tuple[datetime, datetime]] = []
+    if existing.prev is not None:
+        prev_end = existing.prev.start + HOUR
+        if prev_end >= start - NEAR:
+            main_start = min(main_start, prev_end - LOOKBACK)
+        else:
+            extra.append((prev_end - LOOKBACK, prev_end + FIVE_MINUTES))
+    if existing.next is not None:
+        next_end = existing.next.start + HOUR
+        if next_end <= end + NEAR:
+            main_end = max(main_end, next_end + FIVE_MINUTES)
+        else:
+            extra.append((next_end - LOOKBACK, next_end + FIVE_MINUTES))
+    ranges = [(main_start, main_end), *extra]
+    return [(s, min(e, now)) for s, e in ranges if s < now]
 
 
 # --- Ophalen en importeren ----------------------------------------------------------------------
@@ -197,9 +298,9 @@ def site_energy_entity_id(hass: HomeAssistant, model: SiteModel) -> str:
 
 
 async def fetch_lifetime(
-    client: SolarEdgeMonitoringClient, model: SiteModel, start: datetime, end: datetime
+    client: SolarEdgeMonitoringClient, model: SiteModel, ranges: list[tuple[datetime, datetime]]
 ) -> list[tuple[datetime, float]]:
-    """De lifetime per 5 minuten over ``[start, end)``, in blokken van 7 dagen (kleiner bij EXPORT_LIMIT_REACHED)."""
+    """De lifetime per 5 minuten over ``ranges``, in blokken van 7 dagen (kleiner bij EXPORT_LIMIT_REACHED)."""
     by_type: dict[str, list[str]] = {}
     for inverter in model.inverters:
         by_type.setdefault(inverter.analysis_type, []).append(inverter.identifier)
@@ -211,7 +312,7 @@ async def fetch_lifetime(
     ]
 
     charts: list[GenerateChartResponse] = []
-    pending = chunks(start, end)
+    pending = [c for start, end in ranges for c in chunks(start, end)]
     while pending:
         chunk_start, chunk_end = pending.pop(0)
         try:
@@ -221,53 +322,80 @@ async def fetch_lifetime(
             if err.code != "EXPORT_LIMIT_REACHED" or size <= MIN_CHUNK:
                 raise
             pending[:0] = chunks(chunk_start, chunk_end, max(size / 2, MIN_CHUNK))
-    _LOGGER.debug("Historie opgehaald in %d blokken (%s – %s)", len(charts), start, end)
+    _LOGGER.debug("Historie opgehaald in %d blokken (%s)", len(charts), ranges)
     return lifetime_series(charts)
 
 
-async def _first_existing(hass: HomeAssistant, statistic_id: str, window_start: datetime) -> ExistingStart | None:
-    """De eerste uurrij vanaf ``window_start``, of ``None`` als de sensor nog geen uurstatistieken heeft."""
-    stats = await get_instance(hass).async_add_executor_job(
-        statistics_during_period,
-        hass,
-        window_start,
-        None,
-        {statistic_id},
-        "hour",
-        {"energy": UnitOfEnergy.KILO_WATT_HOUR},
-        {"state", "sum"},
+def _rows(hass: HomeAssistant, statistic_id: str, start: datetime, end: datetime | None, period: str) -> list[Row]:
+    stats = statistics_during_period(
+        hass, start, end, {statistic_id}, period, {"energy": UnitOfEnergy.KILO_WATT_HOUR}, {"state", "sum"}
     )
-    rows = stats.get(statistic_id) or []
-    first = next((r for r in rows if r.get("sum") is not None), None)
-    if first is None:
-        return None
-    return ExistingStart(dt_util.utc_from_timestamp(first["start"]), first.get("state"), float(first["sum"]))
+    return [
+        Row(dt_util.utc_from_timestamp(r["start"]), r.get("state"), float(r["sum"]))
+        for r in stats.get(statistic_id) or []
+        if r.get("sum") is not None
+    ]
+
+
+def load_existing(hass: HomeAssistant, statistic_id: str, start: datetime, end: datetime) -> tuple[Existing, datetime | None]:
+    """Bestaande rijen rond ``[start, end)`` (in de executor), plus het begin van de laatste uurrij."""
+    prev: Row | None = None
+    for lookback in PREV_SEARCH:
+        since = start - lookback if lookback else datetime(2000, 1, 1, tzinfo=start.tzinfo)
+        before = _rows(hass, statistic_id, since, start, "hour")
+        if before:
+            prev = before[-1]
+            break
+
+    after = _rows(hass, statistic_id, start, None, "hour")
+    last_start = after[-1].start if after else (prev.start if prev else None)
+    if last_start is None:
+        return Existing(None, None), None
+    end = min(end, last_start)
+    nxt = next((r for r in after if r.start >= end), None)
+    hourly = [r.start for r in after if r.start < end]
+    short_until = nxt.start if nxt else end
+    short_term = [r.start for r in _rows(hass, statistic_id, start, short_until, "5minute")] if start < short_until else []
+    return Existing(prev, nxt, hourly, short_term), last_start
+
+
+def local_period(start_date: date, end_date: date) -> tuple[datetime, datetime]:
+    """Van het begin van ``start_date`` tot het eind van ``end_date`` (lokale tijd), in UTC."""
+    return (
+        dt_util.as_utc(dt_util.start_of_local_day(start_date)),
+        dt_util.as_utc(dt_util.start_of_local_day(end_date + DAY)),
+    )
 
 
 async def async_import_history(
-    hass: HomeAssistant, client: SolarEdgeMonitoringClient, model: SiteModel, days: int = DEFAULT_DAYS
+    hass: HomeAssistant,
+    client: SolarEdgeMonitoringClient,
+    model: SiteModel,
+    start_date: date,
+    end_date: date,
+    interval: Interval = HISTORY_INTERVAL_HOUR,
 ) -> ImportResult:
-    """Haal ``days`` dagen historie op en importeer die in de statistieken van *Energie totaal*."""
+    """Haal de historie van ``start_date`` t/m ``end_date`` op en importeer die in de statistieken van *Energie totaal*."""
     if "recorder" not in hass.config.components:
         raise HistoryImportError("recorder_not_running")
+    if start_date > end_date:
+        raise HistoryImportError("invalid_period")
     statistic_id = site_energy_entity_id(hass, model)
 
     now = dt_util.utcnow()
-    window_start = (now - timedelta(days=days)).replace(minute=0, second=0, microsecond=0)
-    existing = await _first_existing(hass, statistic_id, window_start)
-    if existing is None:
+    start, end = local_period(start_date, end_date)
+    end = min(end, now.replace(minute=0, second=0, microsecond=0))
+    existing, last_start = await get_instance(hass).async_add_executor_job(load_existing, hass, statistic_id, start, end)
+    if last_start is None:
         raise HistoryImportError("no_statistics_yet", entity_id=statistic_id)
-    if existing.start <= window_start:
-        return ImportResult(statistic_id, 0, None, None, 0.0)
+    end = min(end, last_start)  # de recorder telt vanaf zijn laatste uurrij zelf verder
+    if start >= end:
+        return ImportResult(statistic_id, interval, start, max(start, end), 0, 0, 0.0)
 
-    # Tot en met het eind van t0, nodig voor de verschuiving van de bestaande rijen
-    series = await fetch_lifetime(client, model, window_start, min(existing.start + 2 * HOUR, now))
+    series = await fetch_lifetime(client, model, fetch_ranges(start, end, existing, now))
     if not series:
         raise HistoryImportError("no_history_data")
-
-    plan = build_import(series, window_start, existing)
-    if not plan.rows:
-        return ImportResult(statistic_id, 0, None, None, 0.0)
+    plan = build_import(series, start, end, interval, existing)
 
     metadata = StatisticMetaData(
         mean_type=StatisticMeanType.NONE,
@@ -278,15 +406,21 @@ async def async_import_history(
         unit_class="energy",
         unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
     )
-    async_import_statistics(hass, metadata, plan.rows)
-    if plan.adjust_from is not None and plan.sum_adjustment:
-        get_instance(hass).async_adjust_statistics(
-            statistic_id, plan.adjust_from, plan.sum_adjustment, UnitOfEnergy.KILO_WATT_HOUR
-        )
+    recorder = get_instance(hass)
+    if plan.hourly:
+        recorder.async_import_statistics(metadata, plan.hourly, Statistics)
+    if plan.short_term:
+        recorder.async_import_statistics(metadata, plan.short_term, StatisticsShortTerm)
+    if plan.adjust_from is not None:
+        recorder.async_adjust_statistics(statistic_id, plan.adjust_from, plan.sum_adjustment, UnitOfEnergy.KILO_WATT_HOUR)
     _LOGGER.info(
-        "%d uren historie geïmporteerd voor %s; bestaande sommen verschoven met %.3f kWh",
-        len(plan.rows),
+        "Historie %s – %s (%s) geïmporteerd voor %s: %d uurrijen, %d 5-minutenrijen; sommen erna verschoven met %.3f kWh",
+        start,
+        end,
+        interval,
         statistic_id,
+        len(plan.hourly),
+        len(plan.short_term),
         plan.sum_adjustment,
     )
-    return ImportResult(statistic_id, len(plan.rows), plan.rows[0]["start"], plan.rows[-1]["start"], plan.sum_adjustment)
+    return ImportResult(statistic_id, interval, start, end, len(plan.hourly), len(plan.short_term), plan.sum_adjustment)

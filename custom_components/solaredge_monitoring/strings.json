@@ -53,10 +53,14 @@
           "panels_interval": "Panel data interval",
           "info_interval": "Weather and alerts interval",
           "include_optimizers": "Create a device per optimizer (panel)",
-          "telemetry_metrics": "Inverter metrics to retrieve (empty = all)"
+          "telemetry_metrics": "Inverter metrics to retrieve (empty = all)",
+          "history_days": "History import button: number of days",
+          "history_interval": "History import button: interval"
         },
         "data_description": {
-          "telemetry_metrics": "Discovered automatically from the SolarEdge API for your inverter type."
+          "telemetry_metrics": "Discovered automatically from the SolarEdge API for your inverter type.",
+          "history_days": "The button imports this many days up to and including today.",
+          "history_interval": "5 minutes also writes short-term statistics; Home Assistant keeps those for the recorder's keep_days (default 10 days)."
         }
       }
     }
@@ -273,21 +277,48 @@
     },
     "entry_not_loaded": {
       "message": "The SolarEdge Monitoring integration for this device is not loaded."
+    },
+    "invalid_period": {
+      "message": "The start date must not be after the end date."
     }
   },
   "services": {
     "import_energy_history": {
       "name": "Import energy history",
-      "description": "Fetches the lifetime energy of the inverters per 5 minutes from SolarEdge and imports it as hourly statistics of the site's Lifetime energy sensor. Only hours before the existing statistics are added; existing sums are shifted so there is no jump.",
+      "description": "Fetches the lifetime energy of the inverters from SolarEdge for a period and imports it into the statistics of the site's Lifetime energy sensor. Existing statistics are rewritten consistently and later sums are shifted, so there is no jump.",
       "fields": {
         "device_id": {
           "name": "Site",
           "description": "The SolarEdge site device."
         },
-        "days": {
-          "name": "Days",
-          "description": "How many days back to import (1–365)."
+        "start": {
+          "name": "Start date",
+          "description": "First day to import (local time)."
+        },
+        "end": {
+          "name": "End date",
+          "description": "Last day to import, inclusive. Default: today. Ends at the last hourly statistic of the recorder."
+        },
+        "interval": {
+          "name": "Interval",
+          "description": "5 minutes (also short-term statistics), 1 hour, or 1 day (one row at the end of each day)."
         }
+      }
+    }
+  },
+  "selector": {
+    "history_interval": {
+      "options": {
+        "five_minutes": "5 minutes",
+        "hour": "1 hour",
+        "day": "1 day"
+      }
+    },
+    "interval": {
+      "options": {
+        "five_minutes": "5 minutes",
+        "hour": "1 hour",
+        "day": "1 day"
       }
     }
   }

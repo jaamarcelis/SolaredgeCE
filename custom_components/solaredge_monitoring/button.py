@@ -11,8 +11,8 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import SolarEdgeEntity, site_device
-from .history import DEFAULT_DAYS, HistoryImportError
-from .services import async_run_import, notify_result
+from .history import HistoryImportError
+from .services import async_run_import, button_period, notify_result
 
 if TYPE_CHECKING:
     from . import SolarEdgeConfigEntry
@@ -28,7 +28,7 @@ async def async_setup_entry(
 
 
 class ImportHistoryButton(SolarEdgeEntity, ButtonEntity):
-    """Importeert de laatste 90 dagen van *Energie totaal* in de statistieken (op de achtergrond)."""
+    """Importeert de historie van *Energie totaal* volgens de opties (dagen en interval), op de achtergrond."""
 
     _attr_translation_key = "import_energy_history"
     _attr_entity_category = EntityCategory.CONFIG
@@ -51,7 +51,7 @@ class ImportHistoryButton(SolarEdgeEntity, ButtonEntity):
 
     async def _run(self) -> None:
         try:
-            result = await async_run_import(self.hass, self._entry, DEFAULT_DAYS)
+            result = await async_run_import(self.hass, self._entry, *button_period(self._entry))
         except HomeAssistantError as err:
             notify_result(self.hass, self._entry, None, str(err))
             return

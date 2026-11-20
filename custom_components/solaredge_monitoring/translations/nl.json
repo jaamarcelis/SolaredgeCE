@@ -53,10 +53,14 @@
           "panels_interval": "Interval paneeldata",
           "info_interval": "Interval weer en alerts",
           "include_optimizers": "Per optimizer (paneel) een apparaat aanmaken",
-          "telemetry_metrics": "Op te halen omvormermetrics (leeg = alle)"
+          "telemetry_metrics": "Op te halen omvormermetrics (leeg = alle)",
+          "history_days": "Knop historie importeren: aantal dagen",
+          "history_interval": "Knop historie importeren: interval"
         },
         "data_description": {
-          "telemetry_metrics": "Automatisch ontdekt via de SolarEdge-API voor jouw omvormertype."
+          "telemetry_metrics": "Automatisch ontdekt via de SolarEdge-API voor jouw omvormertype.",
+          "history_days": "De knop importeert zoveel dagen tot en met vandaag.",
+          "history_interval": "5 minuten schrijft ook kortetermijnstatistieken; Home Assistant bewaart die zo lang als keep_days van de recorder (standaard 10 dagen)."
         }
       }
     }
@@ -273,21 +277,48 @@
     },
     "entry_not_loaded": {
       "message": "De SolarEdge Monitoring-integratie van dit device is niet geladen."
+    },
+    "invalid_period": {
+      "message": "De begindatum mag niet na de einddatum liggen."
     }
   },
   "services": {
     "import_energy_history": {
       "name": "Energiehistorie importeren",
-      "description": "Haalt de lifetime-energie van de omvormers per 5 minuten op bij SolarEdge en importeert die als uurstatistieken van de sensor Energie totaal van de site. Alleen uren vóór de bestaande statistieken worden toegevoegd; bestaande sommen schuiven mee, zodat er geen sprong ontstaat.",
+      "description": "Haalt de lifetime-energie van de omvormers over een periode op bij SolarEdge en importeert die in de statistieken van de sensor Energie totaal van de site. Bestaande statistieken in de periode worden passend herschreven en latere sommen schuiven mee, zodat er geen sprong ontstaat.",
       "fields": {
         "device_id": {
           "name": "Site",
           "description": "Het SolarEdge-site-device."
         },
-        "days": {
-          "name": "Dagen",
-          "description": "Hoeveel dagen terug importeren (1–365)."
+        "start": {
+          "name": "Van",
+          "description": "Eerste dag om te importeren (lokale tijd)."
+        },
+        "end": {
+          "name": "Tot en met",
+          "description": "Laatste dag om te importeren. Standaard vandaag. Eindigt uiterlijk bij de laatste uurstatistiek van de recorder."
+        },
+        "interval": {
+          "name": "Interval",
+          "description": "5 minuten (ook kortetermijnstatistieken), 1 uur, of 1 dag (één rij aan het eind van elke dag)."
         }
+      }
+    }
+  },
+  "selector": {
+    "history_interval": {
+      "options": {
+        "five_minutes": "5 minuten",
+        "hour": "1 uur",
+        "day": "1 dag"
+      }
+    },
+    "interval": {
+      "options": {
+        "five_minutes": "5 minuten",
+        "hour": "1 uur",
+        "day": "1 dag"
       }
     }
   }

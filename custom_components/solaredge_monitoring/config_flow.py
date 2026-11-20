@@ -18,6 +18,7 @@ from homeassistant.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -35,6 +36,8 @@ from .api import (
 )
 from .const import (
     CONF_ENERGY_INTERVAL,
+    CONF_HISTORY_DAYS,
+    CONF_HISTORY_INTERVAL,
     CONF_INCLUDE_OPTIMIZERS,
     CONF_INFO_INTERVAL,
     CONF_LIVE_INTERVAL,
@@ -45,11 +48,15 @@ from .const import (
     CONF_TELEMETRY_METRICS,
     CONF_TOKENS,
     DEFAULT_ENERGY_INTERVAL,
+    DEFAULT_HISTORY_DAYS,
     DEFAULT_INFO_INTERVAL,
     DEFAULT_LIVE_INTERVAL,
     DEFAULT_PANELS_INTERVAL,
     DEFAULT_TELEMETRY_INTERVAL,
     DOMAIN,
+    HISTORY_INTERVAL_HOUR,
+    HISTORY_INTERVALS,
+    MAX_HISTORY_DAYS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -261,6 +268,16 @@ class SolarEdgeOptionsFlow(OptionsFlowWithReload):
                 DEFAULT_INFO_INTERVAL, 1440
             ),
             vol.Required(CONF_INCLUDE_OPTIMIZERS, default=options.get(CONF_INCLUDE_OPTIMIZERS, True)): bool,
+            vol.Required(CONF_HISTORY_DAYS, default=options.get(CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS)): NumberSelector(
+                NumberSelectorConfig(min=1, max=MAX_HISTORY_DAYS, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement="d")
+            ),
+            vol.Required(
+                CONF_HISTORY_INTERVAL, default=options.get(CONF_HISTORY_INTERVAL, HISTORY_INTERVAL_HOUR)
+            ): SelectSelector(
+                SelectSelectorConfig(
+                    options=list(HISTORY_INTERVALS), translation_key=CONF_HISTORY_INTERVAL, mode=SelectSelectorMode.LIST
+                )
+            ),
         }
         if metric_options:
             schema[vol.Optional(CONF_TELEMETRY_METRICS, default=options.get(CONF_TELEMETRY_METRICS, []))] = SelectSelector(
